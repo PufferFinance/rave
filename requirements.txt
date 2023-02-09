@@ -1,0 +1,5 @@
+cytoolz==0.12.1
+eth-hash==0.5.1
+eth-typing==3.2.0
+eth-utils==2.1.0
+toolz==0.12.0

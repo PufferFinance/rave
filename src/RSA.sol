@@ -49,4 +49,24 @@ contract RSA {
             mstore(0x40, add(add(96, freemem), ml))
         }
     }
+
+    // todo make constructor param
+    bytes32 public constant EXPONENT = 0x0000000000000000000000000000000000000000000000000000000000010001;
+
+    function verifyRSA(bytes memory _sig, bytes memory _pk, bytes32 _msgHash) public view returns (bool) {
+        // 65537
+        bytes memory _e = hex"0000000000000000000000000000000000000000000000000000000000010001";
+        bytes memory res = modExp(_sig, _e, _pk);
+
+        // Recovered msgHash will be in last 32B of res
+        uint256 rl = res.length;
+        require(rl >= 32);
+
+        // Extract last 32B
+        bytes memory o = new bytes(32);
+        for (uint256 i = 0; i < 32; i++) {
+            o[i] = res[rl - 32 + i];
+        }
+        return _msgHash == bytes32(o);
+    }
 }

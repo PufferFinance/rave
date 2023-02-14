@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 
 import "src/RSA.sol";
-import "test/helper.sol";
+import "test/utils/helper.sol";
 
 contract TestModExp is Test, BytesFFIFuzzer {
     function setUp() public {}

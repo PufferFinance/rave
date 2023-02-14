@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.13;
 
-contract RSA {
+library RSA {
     // Wrapper function around eip-198
     // Edited from https://gist.github.com/riordant/226f8882556a5c7981b239e4e5d96918
     function modExp(bytes memory _base, bytes memory _exp, bytes memory _mod) public view returns (bytes memory ret) {
@@ -29,19 +29,23 @@ contract RSA {
             // arg[3] = base.bits @ + 96
             // Use identity built-in (contract 0x4) as a cheap memcpy
             let success := staticcall(450, 0x4, add(_base, 32), bl, add(freemem, 96), bl)
+            if iszero(success) { revert(0, 0) }
 
             // arg[4] = exp.bits @ +96+base.length
             let size := add(96, bl)
             success := staticcall(450, 0x4, add(_exp, 32), el, add(freemem, size), el)
+            if iszero(success) { revert(0, 0) }
 
             // arg[5] = mod.bits @ +96+base.length+exp.length
             size := add(size, el)
             success := staticcall(450, 0x4, add(_mod, 32), ml, add(freemem, size), ml)
+            if iszero(success) { revert(0, 0) }
 
             // Total size of input = 96+base.length+exp.length+mod.length
             size := add(size, ml)
             // Invoke contract 0x5, put return value right after mod.length, @ +96
             success := staticcall(sub(gas(), 1350), 0x5, freemem, size, add(96, freemem), ml)
+            if iszero(success) { revert(0, 0) }
 
             // point to the location of the return value (length, bits)
             ret := add(64, freemem)

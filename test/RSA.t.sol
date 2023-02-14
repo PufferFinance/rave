@@ -4,17 +4,10 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 
 import "src/RSA.sol";
+import "test/helper.sol";
 
-contract TestModExp is Test {
-    RSA c;
-
-    function setUp() public {
-        c = new RSA();
-        string[] memory cmds = new string[](2);
-        cmds[0] = "bash";
-        cmds[1] = "test/scripts/runRSAKeygen.sh";
-        vm.ffi(cmds);
-    }
+contract TestModExp is Test, BytesFFIFuzzer {
+    function setUp() public {}
 
     // test vector from https://github.com/ethereum/EIPs/blob/master/EIPS/eip-198.md
     function testModExpVector() public {
@@ -22,7 +15,7 @@ contract TestModExp is Test {
         bytes memory exp = hex"fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e";
         bytes memory mod = hex"fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f";
 
-        bytes memory got = c.modExp(base, exp, mod);
+        bytes memory got = RSA.modExp(base, exp, mod);
         bytes memory expected = hex"0000000000000000000000000000000000000000000000000000000000000001";
 
         assertEq(keccak256(expected), keccak256(got), "ok");
@@ -43,7 +36,7 @@ contract TestModExp is Test {
         cmds[4] = vm.toString(mod);
 
         bytes memory resp = vm.ffi(cmds);
-        bytes memory got = c.modExp(base, exp, mod);
+        bytes memory got = RSA.modExp(base, exp, mod);
 
         console.logBytes(resp);
         console.logBytes(got);
@@ -53,16 +46,21 @@ contract TestModExp is Test {
         assertEq(resp, got);
     }
 
-    function testModExpFuzz(bytes memory _base, bytes memory _exp, bytes memory _mod) public {
+    function testModExpFuzz(bytes memory _b, bytes memory _e, bytes memory _m) public {
+        // convert fuzzed bytes to FFI friendly bytes
+        vm.assume(BytesHelper.notAllZeroes(_b));
+        vm.assume(BytesHelper.notAllZeroes(_e));
+        vm.assume(BytesHelper.notAllZeroes(_m));
+
+        bytes memory _base = getFriendlyBytes(_b);
+        bytes memory _exp = getFriendlyBytes(_e);
+        bytes memory _mod = getFriendlyBytes(_m);
+
         console.logBytes(_base);
         console.logBytes(_exp);
         console.logBytes(_mod);
-        vm.assume(_base.length > 1);
-        vm.assume(_exp.length > 1);
-        vm.assume(_mod.length > 1);
         vm.assume(_mod.length == _base.length);
         vm.assume(_mod.length == _exp.length);
-        vm.assume(_base.length == _exp.length);
 
         string[] memory cmds = new string[](5);
         cmds[0] = "python3";
@@ -71,7 +69,7 @@ contract TestModExp is Test {
         cmds[3] = vm.toString(_exp);
         cmds[4] = vm.toString(_mod);
 
-        bytes memory got = c.modExp(_base, _exp, _mod);
+        bytes memory got = RSA.modExp(_base, _exp, _mod);
         console.logBytes(got);
         console.log("got len: %s", got.length);
 
@@ -81,6 +79,34 @@ contract TestModExp is Test {
 
         assertEq(keccak256(resp), keccak256((got)));
         assertEq(resp, got);
+    }
+}
+
+contract TestRSA is Test, BytesFFIFuzzer {
+    bytes PUBKEY;
+
+    function setUp() public {
+        // Generate a new 4096b RSA private key
+        newRsaKeypair();
+        // Write the public key into global PUBKEY
+        readRsaPubKey();
+    }
+
+    function newRsaKeypair() public {
+        // Generate a new 4096b RSA private key
+        string[] memory cmds = new string[](3);
+        cmds[0] = "bash";
+        cmds[1] = "test/scripts/runRSAKeygen.sh";
+        cmds[2] = "4096";
+        vm.ffi(cmds);
+    }
+
+    function readRsaPubKey() public {
+        // Extract public key using openssl
+        string[] memory cmds1 = new string[](2);
+        cmds1[0] = "bash";
+        cmds1[1] = "test/scripts/runPubKeyExtraction.sh";
+        PUBKEY = vm.ffi(cmds1);
     }
 
     function testVerifyRSA256b() public {
@@ -93,7 +119,7 @@ contract TestModExp is Test {
 
         assertEq(keccak256(_msg), _msgHash);
 
-        bool got = c.verifyRSA(_sig, _pubKey, _exp, _msgHash);
+        bool got = RSA.verifyRSA(_sig, _pubKey, _exp, _msgHash);
         assert(got);
     }
 
@@ -109,7 +135,7 @@ contract TestModExp is Test {
 
         assertEq(keccak256(_msg), _msgHash, "hash not matching");
 
-        bool got = c.verifyRSA(_sig, _pubKey, _exp, _msgHash);
+        bool got = RSA.verifyRSA(_sig, _pubKey, _exp, _msgHash);
         assert(got);
     }
 
@@ -126,7 +152,7 @@ contract TestModExp is Test {
             hex"7b226964223a22323139393636323830353638383933363030353433343237353830363038313934303839373633222c2274696d657374616d70223a22323032332d30312d32305431393a34373a32382e343635343430222c2276657273696f6e223a342c226570696450736575646f6e796d223a224562724d3658365943483362726a50585432336756682f49324547357356664859682b533534666230727241715652546952544f53664c73575356545a63387772617a4747376f6f6f476f4d5537476a3554456873767344495634615970766b536b2f453354736237436147642b4979316345684c4f34475077646d77742f50584e51513368744c647933614e623769514d724e62694663646b5664562f74657064657a4d73534238476f3d222c2261647669736f727955524c223a2268747470733a2f2f73656375726974792d63656e7465722e696e74656c2e636f6d222c2261647669736f7279494473223a5b22494e54454c2d53412d3030333334222c22494e54454c2d53412d3030363135225d2c22697376456e636c61766551756f7465537461747573223a2253575f48415244454e494e475f4e4545444544222c22697376456e636c61766551756f7465426f6479223a22416741424149414d4141414e414130414141414141454a68624a6a56504a6353593552487962446e4144384141414141414141414141414141414141414141414642514c422f2b414467414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141427741414141414141414166414141414141414141453279742b444b582b797138336c7a2b686e6c586f79584f74456530505a6a376c4543666b6d5268613179414141414141414141414141414141414141414141414141414141414141414141414141414141414141434431786e6e6665724b4648443275765971545864444138695a32326b434435787737683338434d664f6e674141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141434f4b6e51656750376a4a4b435257304375776f6342316239496c6b334c78645166636d38526766776b744e374c7a67576b6d55317437477a5a66335038673263414141414141414141414141414141414141414141227d";
 
         bytes32 _msgHash = sha256(_msg);
-        bool got = c.verifyRSA(_sig, _pubKey, _exp, _msgHash);
+        bool got = RSA.verifyRSA(_sig, _pubKey, _exp, _msgHash);
         assert(got);
     }
 
@@ -143,39 +169,40 @@ contract TestModExp is Test {
             hex"7b226964223a22313630353730303234343838363134303335383335303037313436313436353334323938303331222c2274696d657374616d70223a22323032332d30312d32305431393a35303a32302e363737313532222c2276657273696f6e223a342c226570696450736575646f6e796d223a224562724d3658365943483362726a50585432336756682f49324547357356664859682b533534666230727241715652546952544f53664c73575356545a63387772617a4747376f6f6f476f4d5537476a3554456873767344495634615970766b536b2f453354736237436147642b4979316345684c4f34475077646d77742f50584e51513368744c647933614e623769514d724e62694663646b5664562f74657064657a4d73534238476f3d222c2261647669736f727955524c223a2268747470733a2f2f73656375726974792d63656e7465722e696e74656c2e636f6d222c2261647669736f7279494473223a5b22494e54454c2d53412d3030333334222c22494e54454c2d53412d3030363135225d2c22697376456e636c61766551756f7465537461747573223a2253575f48415244454e494e475f4e4545444544222c22697376456e636c61766551756f7465426f6479223a22416741424149414d4141414e414130414141414141454a68624a6a56504a6353593552487962446e4144384141414141414141414141414141414141414141414642514c422f2b414467414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141427741414141414141414166414141414141414141453279742b444b582b797138336c7a2b686e6c586f79584f74456530505a6a376c4543666b6d5268613179414141414141414141414141414141414141414141414141414141414141414141414141414141414141434431786e6e6665724b4648443275765971545864444138695a32326b434435787737683338434d664f6e6741414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414143664b567161302f677a57706a56516733693332327a3676636b37486c435a7842316a3456777a3141714f304141414141414141414141414141414141414141414141414141414141414141414141414141414141227d";
 
         bytes32 _msgHash = sha256(_msg);
-        bool got = c.verifyRSA(_sig, _pubKey, _exp, _msgHash);
+        bool got = RSA.verifyRSA(_sig, _pubKey, _exp, _msgHash);
         assert(got);
     }
 
-    // function testOpenSSL(bytes memory _msg) public {
-    function testOpenSSL() public {
-        // vm.assume(_msg.length > 1);
-        // vm.assume(vm.bytes
-        // bytes memory _msg = hex"deadbeef";
-        // extract public key using openssl
-        string[] memory cmds1 = new string[](2);
-        cmds1[0] = "bash";
-        cmds1[1] = "test/scripts/runPubKeyExtraction.sh";
-        bytes memory _pubKey = vm.ffi(cmds1);
-        console.logBytes(_pubKey);
+    // Test generates valid RSA sigs over fuzzed msgs (via openssl) then verifies the sigs
+    function testRsaFuzz(bytes memory _m) public {
+        // Verify not empty bytes for FFI compatibility
+        vm.assume(_m.length > 1);
+        vm.assume(BytesHelper.notAllZeroes(_m));
 
-        bytes memory _exp = hex"0000000000000000000000000000000000000000000000000000000000010001";
+        // Convert the random bytes into valid utf-8 bytes
+        bytes memory _msg = getFriendlyBytes(_m);
 
-        bytes memory _msg = "hello world";
-        console.log("input: %s", string(_msg));
+        // The msg will be a valid utf-8 hex string as input to bash FFI
+        console.log("input as str: %s", vm.toString(_msg));
+        console.logBytes(_msg);
 
-        // generate signature via openssl
-        string[] memory cmds2 = new string[](3);
-        cmds2[0] = "bash";
-        cmds2[1] = "test/scripts/runRSASigGen.sh";
-        cmds2[2] = string(_msg);
-        bytes memory _sig = vm.ffi(cmds2);
+        // Sign the random msg using openssl via ffi
+        string[] memory cmds = new string[](3);
+        cmds[0] = "bash";
+        cmds[1] = "test/scripts/runRSASigGen.sh";
+        cmds[2] = string(_msg);
+        bytes memory _sig = vm.ffi(cmds);
         console.logBytes(_sig);
 
+        // compute hash of msg
         bytes32 _msgHash = sha256(_msg);
         console.logBytes32(_msgHash);
-        bool got = c.verifyRSA(_sig, _pubKey, _exp, _msgHash);
-        assert(got);
-        // assert(false);
+
+        // Assumes the openssl generated RSA key has exponent 65537
+        bytes memory _exp = hex"0000000000000000000000000000000000000000000000000000000000010001";
+
+        // signature should be valid
+        bool valid = RSA.verifyRSA(_sig, PUBKEY, _exp, _msgHash);
+        assert(valid);
     }
 }

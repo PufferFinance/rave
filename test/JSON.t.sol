@@ -4,42 +4,65 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 
 import "src/JSON.sol";
-import "test/helper.sol";
+import "test/utils/helper.sol";
+import "test/mocks/JSON.sol";
 
-contract TestJSON is Test, BytesFFIFuzzer {
-    // JSONDecoderc;
+abstract contract TestHappyJSON is Test, BytesFFIFuzzer {
+    MockableJson c;
 
-    function setUp() public {
-        // c = new JSONDecoder();
-    }
+    function setUp() public virtual {}
 
     function testVmParseJson() public {
-        string memory json = "{\"name\":\"John\",\"age\":30,\"city\":\"New York\"}";
-        string memory key = "name";
-        bytes memory expected = abi.decode(vm.parseJson(json, key), (bytes));
-        console.log("json['%s'] = %s", key, string(expected));
-        console.logBytes(expected);
-        assertEq(bytes("John"), expected);
+        string memory json = c.JSON();
+        string[] memory keys = c.keys();
+        string[] memory values = c.values();
+
+        for (uint256 i = 0; i < keys.length; i++) {
+            string memory key = keys[i];
+            string memory value = values[i];
+            console.log("expected: json['%s'] = %s", key, value);
+
+            bytes memory parsed = abi.decode(vm.parseJson(json, key), (bytes));
+            console.log("got: %s", string(parsed));
+
+            assertEq(bytes(value).length, parsed.length);
+            assertEq(bytes(value), parsed);
+            assertEq(value, string(parsed));
+        }
     }
 
-    function testParseValidJson() public {
-        string memory json = "{\"name\":\"John\",\"age\":30,\"city\":\"New York\"}";
-        console.log("%s", json);
-        string memory key = "city";
-        bytes memory expected = abi.decode(vm.parseJson(json, key), (bytes));
-        console.log("expected: json['%s']: %s", key, string(expected));
+    function testLibParseJson() public {
+        string memory json = c.JSON();
+        string[] memory keys = c.keys();
+        string[] memory values = c.values();
 
-        uint256 maxElements = 7;
-        (uint256 code, JsmnSolLib.Token[] memory tokens, uint256 numTokens) = JsmnSolLib.parse(json, maxElements);
+        // Parse JSON into tokens
+        (uint256 code, JSONParser.Token[] memory tokens, uint256 numTokens) = JSONParser.parse(json, c.maxElements());
 
-        console.log("code: %s", code);
-        assertEq(code, 0);
-        assertEq(numTokens, maxElements);
+        // Successful parsing
+        assertEq(code, JSONParser.RETURN_SUCCESS);
+        assertEq(numTokens, c.maxElements());
 
-        for (uint256 i = 1; i < tokens.length; i += 2) {
-            string memory k = JsmnSolLib.getBytes(json, tokens[i].start, tokens[i].end);
-            string memory v = JsmnSolLib.getBytes(json, tokens[i + 1].start, tokens[i + 1].end);
-            console.log("json['%s']: %s", k, v);
+        // The 0th token references the whole JSON
+        assert(tokens[0].jsmnType == JSONParser.JsmnType.OBJECT);
+        assertEq(tokens.length, values.length + keys.length + 1);
+        assertEq(tokens[0].start, 0);
+        assertEq(tokens[0].end, bytes(json).length);
+
+        for ((uint256 i, uint256 j) = (1, 0); i < numTokens; i += 2) {
+            string memory k = JSONParser.getBytes(json, tokens[i].start, tokens[i].end);
+            string memory v = JSONParser.getBytes(json, tokens[i + 1].start, tokens[i + 1].end);
+            console.log("got: json['%s']: %s", k, v);
+            console.log("expected: json['%s']: %s", keys[j], values[j]);
+            assertEq(k, keys[j]);
+            assertEq(v, values[j]);
+            j += 1;
         }
+    }
+}
+
+contract TestBasicJson is TestHappyJSON {
+    function setUp() public override {
+        c = new MockBasicJson();
     }
 }

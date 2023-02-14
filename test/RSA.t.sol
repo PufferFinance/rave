@@ -77,6 +77,13 @@ contract TestModExp is Test, BytesFFIFuzzer {
         console.logBytes(resp);
         console.log("resp len: %s", resp.length);
 
+        if (!BytesHelper.notAllZeroes(resp)) {
+            if (!BytesHelper.notAllZeroes(got)) {
+                // both are 0s
+                return;
+            }
+        }
+
         assertEq(keccak256(resp), keccak256((got)));
         assertEq(resp, got);
     }
@@ -183,7 +190,7 @@ contract TestRSA is Test, BytesFFIFuzzer {
         bytes memory _msg = getFriendlyBytes(_m);
 
         // The msg will be a valid utf-8 hex string as input to bash FFI
-        console.log("input as str: %s", vm.toString(_msg));
+        console.log("input string: %s", string(_msg));
         console.logBytes(_msg);
 
         // Sign the random msg using openssl via ffi

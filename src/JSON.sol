@@ -18,7 +18,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.*/
 pragma solidity ^0.8.13;
 
-library JsmnSolLib {
+library JSONParser {
     enum JsmnType {
         UNDEFINED,
         OBJECT,
@@ -34,9 +34,9 @@ library JsmnSolLib {
 
     struct Token {
         JsmnType jsmnType;
-        uint256 start;
+        uint56 start;
         bool startSet;
-        uint256 end;
+        uint56 end;
         bool endSet;
         uint8 size;
     }
@@ -66,9 +66,9 @@ library JsmnSolLib {
 
     function fillToken(Token memory token, JsmnType jsmnType, uint256 start, uint256 end) internal pure {
         token.jsmnType = jsmnType;
-        token.start = start;
+        token.start = uint56(start);
         token.startSet = true;
-        token.end = end;
+        token.end = uint56(end);
         token.endSet = true;
         token.size = 0;
     }
@@ -179,7 +179,7 @@ library JsmnSolLib {
                     tokens[uint256(parser.toksuper)].size++;
                 }
                 token.jsmnType = (c == 0x7b ? JsmnType.OBJECT : JsmnType.ARRAY);
-                token.start = parser.pos;
+                token.start = uint56(parser.pos);
                 token.startSet = true;
                 parser.toksuper = int256(parser.toknext - 1);
                 continue;
@@ -197,7 +197,7 @@ library JsmnSolLib {
                             return (RETURN_ERROR_INVALID_JSON, tokens, 0);
                         }
                         parser.toksuper = -1;
-                        tokens[i].end = parser.pos + 1;
+                        tokens[i].end = uint56(parser.pos + 1);
                         tokens[i].endSet = true;
                         isUpdated = true;
                         break;

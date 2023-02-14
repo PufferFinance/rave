@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 contract RSA {
+    // Wrapper function around eip-198
     // Edited from https://gist.github.com/riordant/226f8882556a5c7981b239e4e5d96918
     function modExp(bytes memory _base, bytes memory _exp, bytes memory _mod) public view returns (bytes memory ret) {
         // Get input lengths
@@ -50,13 +51,12 @@ contract RSA {
         }
     }
 
-    // todo make constructor param
-    bytes32 public constant EXPONENT = 0x0000000000000000000000000000000000000000000000000000000000010001;
-
-    function verifyRSA(bytes memory _sig, bytes memory _pk, bytes32 _msgHash) public view returns (bool) {
-        // 65537
-        bytes memory _e = hex"0000000000000000000000000000000000000000000000000000000000010001";
-        bytes memory res = modExp(_sig, _e, _pk);
+    function verifyRSA(bytes memory _sig, bytes memory _pk, bytes memory _exp, bytes32 _msgHash)
+        public
+        view
+        returns (bool)
+    {
+        bytes memory res = modExp(_sig, _exp, _pk);
 
         // Recovered msgHash will be in last 32B of res
         uint256 rl = res.length;

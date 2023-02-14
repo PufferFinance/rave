@@ -1,2 +1,7 @@
 cache/
 out/
+*.pem
+*.der
+.env
+.DS_Store
+.vscode

@@ -31,6 +31,57 @@ contract Base64Decoder {
 
         // Decode blocks of 4 bytes -> 3 bytes
         for (; i < _bs.length; i += 4) {
+            // Grab 4 bytes
+            uint32 bs = _bs.readUint32(i);
+
+            // Extract bytes
+            uint8 b0 = uint8((bs >> 24) & 0xff);
+            uint8 b1 = uint8((bs >> 16) & 0xff);
+            uint8 b2 = uint8((bs >> 8) & 0xff);
+            uint8 b3 = uint8((bs >> 0) & 0xff);
+
+            // Convert octets to sextets using lookup table
+            uint8 sext0 = b64Map[b0];
+            uint8 sext1 = b64Map[b1];
+            uint8 sext2 = b64Map[b2];
+            uint8 sext3 = b64Map[b3];
+
+            // If last two chars are "=" it is padding
+            if (b2 == 0x3d) {
+                padTotal += 1;
+            }
+
+            if (b3 == 0x3d) {
+                padTotal += 1;
+            }
+
+            // Convert the 4-byte block to a 3-byte block
+            // Overwrite initial bytes with decoded bytes
+            _bs[j] = bytes1(uint8(sext0 << 2 | sext1 >> 4));
+            _bs[j + 1] = bytes1(uint8((sext1 & 15) << 4 | sext2 >> 2));
+            _bs[j + 2] = bytes1(uint8((sext2 & 3) << 6 | sext3));
+            j += 3;
+        }
+
+        // Remove trailing zeroes encode as "=" or "=="
+        require(padTotal <= 2);
+        bytes memory res = _bs.substring(0, j - padTotal);
+
+        return string(res);
+    }
+
+    /*
+     * @dev Decodes a base64-encoded string. The logic is split which results in higher gas for longer input strings.
+     * @param _str The base64-encoded string
+     * @return Returns a base64-decoded string
+     */
+    function decode2(string memory _str) public view returns (string memory) {
+        require((bytes(_str).length & 3) == 0, "Length not multiple of 4");
+        bytes memory _bs = bytes(_str);
+        (uint256 i, uint256 j, uint256 padTotal) = (0, 0, 0);
+
+        // Decode blocks of 4 bytes -> 3 bytes
+        for (; i < _bs.length; i += 4) {
             (uint32 dec, uint256 pad) = decodeBlock(_bs.readUint32(i));
 
             // Decode uint32 into 3 bytes

@@ -6,9 +6,7 @@ import "src/JSON.sol";
 import "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
 import "ens-contracts/dnssec-oracle/BytesUtils.sol";
 
-import "forge-std/Test.sol";
-
-contract RAVE is Base64Decoder, Test {
+contract RAVE is Base64Decoder {
     using BytesUtils for *;
 
     uint256 constant MAX_JSON_ELEMENTS = 19;

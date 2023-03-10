@@ -20,3 +20,41 @@ contract BytesFFIFuzzer is Test {
         return bytes(vm.toString(_fuzzedBytes));
     }
 }
+
+contract KeyGenHelper is Test {
+    bytes PUBKEY;
+
+    function newRsaKeypair() public {
+        // Generate a new 4096b RSA private key
+        string[] memory cmds = new string[](3);
+        cmds[0] = "bash";
+        cmds[1] = "test/scripts/runRSAKeygen.sh";
+        cmds[2] = "4096";
+        vm.ffi(cmds);
+    }
+
+    function readRsaPubKey() public {
+        // Extract public key using openssl
+        string[] memory cmds = new string[](2);
+        cmds[0] = "bash";
+        cmds[1] = "test/scripts/runPubKeyExtraction.sh";
+        PUBKEY = vm.ffi(cmds);
+    }
+
+    function newX509Cert() public {
+        // Generate a new 4096b RSA private key and x509 cert
+        string[] memory cmds = new string[](3);
+        cmds[0] = "bash";
+        cmds[1] = "test/scripts/runX509Gen.sh";
+        cmds[2] = "4096";
+        vm.ffi(cmds);
+    }
+
+    function readX509PubKey() public {
+        // Extract public key using openssl
+        string[] memory cmds = new string[](2);
+        cmds[0] = "bash";
+        cmds[1] = "test/scripts/runX509PubKeyExtraction.sh";
+        PUBKEY = vm.ffi(cmds);
+    }
+}

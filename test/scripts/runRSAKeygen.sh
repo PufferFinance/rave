@@ -4,4 +4,4 @@
 openssl genrsa -out private.pem "$1"
 
 # Write the public key to file
-openssl rsa -in private.pem -outform der -pubout -out public.pem
+openssl rsa -in private.pem -outform der -pubout -out public.der

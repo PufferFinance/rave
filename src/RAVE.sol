@@ -2,13 +2,16 @@
 pragma solidity ^0.8.13;
 
 import "src/base64.sol";
-import "src/RSA.sol";
 import "src/JSON.sol";
+import "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
+import "ens-contracts/dnssec-oracle/BytesUtils.sol";
 
 contract RAVE is Base64Decoder {
+    using BytesUtils for *;
+
     uint256 constant MAX_JSON_ELEMENTS = 19;
     uint256 constant QUOTE_BODY_LENGTH = 432;
-    bytes _exp = hex"0000000000000000000000000000000000000000000000000000000000010001";
+    bytes exp = hex"0000000000000000000000000000000000000000000000000000000000010001";
 
     constructor() {}
 
@@ -29,6 +32,19 @@ contract RAVE is Base64Decoder {
         return _quoteBody;
     }
 
+    function verifyReport(bytes calldata _report, bytes calldata _sig, bytes calldata _signingPK)
+        public
+        view
+        returns (bool)
+    {
+        // Use _signingPK to verify _sig is the RSA signature over sha256(_report)
+        (bool success, bytes memory got) = RSAVerify.rsarecover(_signingPK, exp, _sig);
+        // Last 32 bytes is recovered signed digest
+        bytes32 recovered = got.readBytes32(got.length - 32);
+
+        return success && recovered == sha256(_report);
+    }
+
     function verifyRA(
         string calldata _report,
         bytes calldata _sig,
@@ -41,9 +57,7 @@ contract RAVE is Base64Decoder {
         require(_mrenclave.length == 32);
         require(_mrsigner.length == 32);
 
-        // Use _signingPK to verify _sig is the RSA signature over sha256(_report)
-        bytes32 _digest = sha256(bytes(_report));
-        assert(RSA.verifyRSA(_sig, _signingPK, _exp, _digest));
+        require(verifyReport(bytes(_report), _sig, _signingPK));
 
         // Extract the quote body
         bytes memory _quoteBody = extractQuoteBody(_report);

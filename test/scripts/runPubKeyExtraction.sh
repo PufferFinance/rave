@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Display all RSA public key metadata
-keydata=$(openssl rsa -pubin -inform DER -text -noout < public.pem)
+keydata=$(openssl rsa -pubin -inform DER -text -noout < public.der)
 
 # Filter for the modulus (public key)
 modulus=$(echo $keydata | sed -n 's/.*Modulus: \(.*\) Exponent.*/\1/p' | tr -d ' ')
@@ -14,3 +14,5 @@ output="0x$no_colons"
 
 # Print public key to stdout for FFI
 echo $output
+
+# openssl x509 -modulus -noout < public.cer | sed s/Modulus=/0x/

@@ -16,10 +16,10 @@ abstract contract RAVETester is Test {
         string memory _report = m.report();
         bytes memory _sig = m.sig();
         bytes memory _signingPK = m.signingPK();
-        bytes memory _mrenclave = m.mrenclave();
-        bytes memory _mrsigner = m.mrsigner();
+        bytes32 _mrenclave = m.mrenclave();
+        bytes32 _mrsigner = m.mrsigner();
         bytes memory _payload = m.payload();
-        assert(c.verifyRA(_report, _sig, _signingPK, _mrenclave, _mrsigner, _payload));
+        assert(c.verifyRemoteAttestation(_report, _sig, _signingPK, _mrenclave, _mrsigner, _payload));
     }
 }
 

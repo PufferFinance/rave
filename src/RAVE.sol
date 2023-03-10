@@ -6,11 +6,16 @@ import "src/JSON.sol";
 import "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
 import "ens-contracts/dnssec-oracle/BytesUtils.sol";
 
-contract RAVE is Base64Decoder {
+import "forge-std/Test.sol";
+
+contract RAVE is Base64Decoder, Test {
     using BytesUtils for *;
 
     uint256 constant MAX_JSON_ELEMENTS = 19;
     uint256 constant QUOTE_BODY_LENGTH = 432;
+    uint256 constant MRENCLAVE_OFFSET = 112;
+    uint256 constant MRSIGNER_OFFSET = 176;
+    uint256 constant PAYLOAD_OFFSET = 368;
     bytes exp = hex"0000000000000000000000000000000000000000000000000000000000010001";
 
     constructor() {}
@@ -32,7 +37,7 @@ contract RAVE is Base64Decoder {
         return _quoteBody;
     }
 
-    function verifyReport(bytes calldata _report, bytes calldata _sig, bytes calldata _signingPK)
+    function verifyReportSignature(bytes calldata _report, bytes calldata _sig, bytes calldata _signingPK)
         public
         view
         returns (bool)
@@ -45,48 +50,51 @@ contract RAVE is Base64Decoder {
         return success && recovered == sha256(_report);
     }
 
-    function verifyRA(
+    function verifyReportContents(
         string calldata _report,
-        bytes calldata _sig,
-        bytes calldata _signingPK,
-        bytes calldata _mrenclave,
-        bytes calldata _mrsigner,
+        bytes32 _mrenclave,
+        bytes32 _mrsigner,
         bytes calldata _payload
     ) public view returns (bool) {
         require(_payload.length <= 64);
         require(_mrenclave.length == 32);
         require(_mrsigner.length == 32);
 
-        require(verifyReport(bytes(_report), _sig, _signingPK));
-
         // Extract the quote body
         bytes memory _quoteBody = extractQuoteBody(_report);
 
         // Verify report's MRENCLAVE matches the expected
-        uint256 i;
-        uint256 j;
-        bytes memory mre = new bytes(32);
-        for ((i, j) = (112, 0); i < 144; i++) {
-            mre[j] = _quoteBody[i];
-            j += 1;
-        }
-        assert(keccak256(mre) == keccak256(_mrenclave));
+        bytes32 mre = _quoteBody.readBytes32(MRENCLAVE_OFFSET);
+        require(mre == _mrenclave);
 
         // Verify report's MRSIGNER matches the expected
-        bytes memory mrs = new bytes(32);
-        for ((i, j) = (176, 0); i < 208; i++) {
-            mrs[j] = _quoteBody[i];
-            j += 1;
-        }
-        assert(keccak256(mrs) == keccak256(_mrsigner));
+        bytes32 mrs = _quoteBody.readBytes32(MRSIGNER_OFFSET);
+        require(mrs == _mrsigner);
 
         // Verify report's <= 64B payload matches the expected
-        bytes memory p = new bytes(_payload.length);
-        for ((i, j) = (368, 0); i < 368 + _payload.length; i++) {
-            p[j] = _quoteBody[i];
-            j += 1;
-        }
-        assert(keccak256(_payload) == keccak256(p));
+        bytes memory p = _quoteBody.substring(PAYLOAD_OFFSET, _payload.length);
+        assert(keccak256(p) == keccak256(_payload));
+
+        return true;
+    }
+
+    function verifyRemoteAttestation(
+        string calldata _report,
+        bytes calldata _sig,
+        bytes calldata _signingPK,
+        bytes32 _mrenclave,
+        bytes32 _mrsigner,
+        bytes calldata _payload
+    ) public view returns (bool) {
+        require(_payload.length <= 64);
+        require(_mrenclave.length == 32);
+        require(_mrsigner.length == 32);
+
+        // Verify the report was signed by the _SigningPK
+        require(verifyReportSignature(bytes(_report), _sig, _signingPK));
+
+        // Verify the report's contents match the expected
+        require(verifyReportContents(_report, _mrenclave, _mrsigner, _payload));
 
         return true;
     }

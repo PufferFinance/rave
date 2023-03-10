@@ -6,9 +6,6 @@ import "src/base64.sol";
 import "test/utils/helper.sol";
 
 contract TestBase64 is Base64Decoder, Test, BytesFFIFuzzer {
-    // A lookup table of decodings
-    // mapping(bytes1 => uint8) public b64Map;
-
     function testDecodeMan() public {
         string memory enc = "TWFu";
         string memory dec = decode(enc);

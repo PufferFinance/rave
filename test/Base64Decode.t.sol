@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import "src/base64.sol";
+import "src/Base64Decode.sol";
 import "test/utils/helper.sol";
 
 contract TestBase64 is Base64Decoder, Test, BytesFFIFuzzer {

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.13;
 
-import "src/base64.sol";
-import "src/JSON.sol";
+import "src/Base64Decode.sol";
+import "src/JSONDecode.sol";
 import "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
 import "ens-contracts/dnssec-oracle/BytesUtils.sol";
 

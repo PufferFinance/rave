@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.13;
 
-import "src/JSON.sol";
-
 abstract contract MockEvidence {
     function report() public pure virtual returns (string memory);
     function sig() public pure virtual returns (bytes memory);

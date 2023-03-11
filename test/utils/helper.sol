@@ -40,6 +40,10 @@ contract KeyGenHelper is Test {
         cmds[1] = "test/scripts/runPubKeyExtraction.sh";
         PUBKEY = vm.ffi(cmds);
     }
+}
+
+contract X509GenHelper is Test {
+    bytes PUBKEY;
 
     function newX509Cert() public {
         // Generate a new 4096b RSA private key and x509 cert

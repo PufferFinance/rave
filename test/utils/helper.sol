@@ -44,9 +44,13 @@ contract KeyGenHelper is Test {
 
 contract X509GenHelper is Test {
     bytes PUBKEY;
+    bytes CERT_BYTES;
+    bytes CERT_SIG;
+    bytes PARENT_MODULUS;
 
-    function newX509Cert() public {
-        // Generate a new 4096b RSA private key and x509 cert
+    function newX509Certs() public {
+        // Generate two new 4096b RSA private keys and x509 certs
+        // The parent key signs the child certificate
         string[] memory cmds = new string[](3);
         cmds[0] = "bash";
         cmds[1] = "test/scripts/runX509Gen.sh";
@@ -60,5 +64,32 @@ contract X509GenHelper is Test {
         cmds[0] = "bash";
         cmds[1] = "test/scripts/runX509PubKeyExtraction.sh";
         PUBKEY = vm.ffi(cmds);
+    }
+
+    function readX509Signature() public {
+        // Extract x509 signature from child cert
+        string[] memory cmds = new string[](3);
+        cmds[0] = "bash";
+        cmds[1] = "test/scripts/runX509SigExtraction.sh";
+        cmds[2] = "signed_child.cer";
+        CERT_SIG = vm.ffi(cmds);
+    }
+
+    function readX509Modulus() public {
+        // Extract parent's modulus from x509
+        string[] memory cmds = new string[](3);
+        cmds[0] = "bash";
+        cmds[1] = "test/scripts/runX509ModulusExtraction.sh";
+        cmds[2] = "parent.cer";
+        PARENT_MODULUS = vm.ffi(cmds);
+    }
+
+    function readX509Body() public {
+        // Extract child cert's body
+        string[] memory cmds = new string[](3);
+        cmds[0] = "bash";
+        cmds[1] = "test/scripts/runX509BodyExtraction.sh";
+        cmds[2] = "signed_child.cer";
+        CERT_BYTES = vm.ffi(cmds);
     }
 }

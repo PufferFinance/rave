@@ -13,12 +13,7 @@ import "ens-contracts/dnssec-oracle/BytesUtils.sol";
 contract TestCertChainVerification is Test, X509GenHelper {
     using BytesUtils for *;
 
-    function setUp() public {
-        // Generate a new 4096b RSA private key and x509 cert
-        newX509Cert();
-        // Write the public key into global PUBKEY
-        readX509PubKey();
-    }
+    function setUp() public {}
 
     function testIntelCertChain() public {
         // DER encoded bytes of the Intel Leaf Signing x509 Certificate (excluding the header and signature)
@@ -44,9 +39,38 @@ contract TestCertChainVerification is Test, X509GenHelper {
         assertEq(expectedHash, _msgHash);
 
         require(X509Verifier.verifyChildCert(certBytes, certSig, intelRootModulus, exp));
+    }
 
-        // extract public key from certBytes
+    function setupCertChain() public {
+        // Generate new x509 parent and child certs
+        newX509Certs();
+        // Write the public key into global PUBKEY
+        readX509PubKey();
 
-        // can now verify remote attesation evidence
+        readX509Signature();
+    }
+
+    function testSetupCertChain() public {
+        // Generate new x509 parent and child certs
+        // newX509Certs();
+
+        // Read the child cert signature
+        readX509Signature();
+        console.logBytes(CERT_SIG);
+
+        readX509Modulus();
+        console.logBytes(PARENT_MODULUS);
+
+        readX509Body();
+        console.logBytes(CERT_BYTES);
+
+        bytes memory exp = hex"0000000000000000000000000000000000000000000000000000000000010001";
+
+        require(X509Verifier.verifyChildCert(CERT_BYTES, CERT_SIG, PARENT_MODULUS, exp));
+
+        // assert(false);
+
+        // Write the public key into global PUBKEY
+        // readX509PubKey();
     }
 }

@@ -35,5 +35,17 @@ library X509Verifier {
      */
     function getCertPubKey(bytes calldata certBody) public view {
         // Recover the digest using parent's public key
+        // TODO
+    }
+
+    /*
+     * @dev Verifies the x509 certificate hasn't expired
+     * @param certBody The DER-encoded body (preimage) of the x509 
+     * @return Returns ...
+     */
+    function notExpired(bytes calldata certBody) public view returns (bool) {
+        // Recover the digest using parent's public key
+        // TODO
+        return true;
     }
 }

@@ -11,4 +11,4 @@ echo -e "US\nCA\nSan Francisco\nMy Organization\nMy PARENT Name\n\n\n" | openssl
 echo -e "US\nCA\nSan Francisco\nMy Organization\nMy CHILD Name\n\n\n" | openssl req -new -x509 -key child_key.pem -out child.cer -days 365
 
 # Sign the child x509 certificate with the parent's key
-openssl x509 -in child.cer -signkey parent_key.pem > signed_child.cer 
+openssl x509 -in child.cer -signkey parent_key.pem -sha256 > signed_child.cer 

@@ -13,7 +13,24 @@ import "ens-contracts/dnssec-oracle/BytesUtils.sol";
 contract TestCertChainVerification is Test, X509GenHelper {
     using BytesUtils for *;
 
-    function setUp() public {}
+    bytes exponent = hex"0000000000000000000000000000000000000000000000000000000000010001";
+
+    function setUp() public {
+        // Generate new x509 parent and child certs
+        newX509Certs();
+
+        // Read the child cert signature
+        readX509Signature();
+        console.logBytes(CERT_SIG);
+
+        // Read the parent modulus
+        readX509Modulus();
+        console.logBytes(PARENT_MODULUS);
+
+        // Read child cert body
+        readX509Body();
+        console.logBytes(CERT_BYTES);
+    }
 
     function testIntelCertChain() public {
         // DER encoded bytes of the Intel Leaf Signing x509 Certificate (excluding the header and signature)
@@ -31,46 +48,14 @@ contract TestCertChainVerification is Test, X509GenHelper {
         bytes memory intelRootModulus =
             hex"9F3C647EB5773CBB512D2732C0D7415EBB55A0FA9EDE2E649199E6821DB910D53177370977466A6A5E4786CCD2DDEBD4149D6A2F6325529DD10CC98737B0779C1A07E29C47A1AE004948476C489F45A5A15D7AC8ECC6ACC645ADB43D87679DF59C093BC5A2E9696C5478541B979E754B573914BE55D32FF4C09DDF27219934CD990527B3F92ED78FBF29246ABECB71240EF39C2D7107B447545A7FFB10EB060A68A98580219E36910952683892D6A5E2A80803193E407531404E36B315623799AA825074409754A2DFE8F5AFD5FE631E1FC2AF3808906F28A790D9DD9FE060939B125790C5805D037DF56A99531B96DE69DE33ED226CC1207D1042B5C9AB7F404FC711C0FE4769FB9578B1DC0EC469EA1A25E0FF9914886EF2699B235BB4847DD6FF40B606E6170793C2FB98B314587F9CFD257362DFEAB10B3BD2D97673A1A4BD44C453AAF47FC1F2D3D0F384F74A06F89C089F0DA6CDB7FCEEE8C9821A8E54F25C0416D18C46839A5F8012FBDD3DC74D256279ADC2C0D55AFF6F0622425D1B";
 
-        // Intel's root CA exponent
-        bytes memory exp = hex"0000000000000000000000000000000000000000000000000000000000010001";
-
         // The expected msg hash
         bytes32 expectedHash = hex"13472863bcbe2462fb4312ddda9d77ca41575d79760881eb1d2d6c9be2c40094";
         assertEq(expectedHash, _msgHash);
 
-        require(X509Verifier.verifyChildCert(certBytes, certSig, intelRootModulus, exp));
+        require(X509Verifier.verifyChildCert(certBytes, certSig, intelRootModulus, exponent));
     }
 
-    function setupCertChain() public {
-        // Generate new x509 parent and child certs
-        newX509Certs();
-        // Write the public key into global PUBKEY
-        readX509PubKey();
-
-        readX509Signature();
-    }
-
-    function testSetupCertChain() public {
-        // Generate new x509 parent and child certs
-        // newX509Certs();
-
-        // Read the child cert signature
-        readX509Signature();
-        console.logBytes(CERT_SIG);
-
-        readX509Modulus();
-        console.logBytes(PARENT_MODULUS);
-
-        readX509Body();
-        console.logBytes(CERT_BYTES);
-
-        bytes memory exp = hex"0000000000000000000000000000000000000000000000000000000000010001";
-
-        require(X509Verifier.verifyChildCert(CERT_BYTES, CERT_SIG, PARENT_MODULUS, exp));
-
-        // assert(false);
-
-        // Write the public key into global PUBKEY
-        // readX509PubKey();
+    function testCertChainLengthOneIsValid() public {
+        require(X509Verifier.verifyChildCert(CERT_BYTES, CERT_SIG, PARENT_MODULUS, exponent));
     }
 }

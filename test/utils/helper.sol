@@ -47,23 +47,21 @@ contract X509GenHelper is Test {
     bytes CERT_BYTES;
     bytes CERT_SIG;
     bytes PARENT_MODULUS;
+    bytes CHILD_MODULUS;
+
+    string PARENT_NAME = "parent.cer";
+    string CHILD_NAME = "signed_child.cer";
 
     function newX509Certs() public {
         // Generate two new 4096b RSA private keys and x509 certs
         // The parent key signs the child certificate
-        string[] memory cmds = new string[](3);
+        string[] memory cmds = new string[](5);
         cmds[0] = "bash";
         cmds[1] = "test/scripts/runX509Gen.sh";
         cmds[2] = "4096";
+        cmds[3] = PARENT_NAME;
+        cmds[4] = CHILD_NAME;
         vm.ffi(cmds);
-    }
-
-    function readX509PubKey() public {
-        // Extract public key using openssl
-        string[] memory cmds = new string[](2);
-        cmds[0] = "bash";
-        cmds[1] = "test/scripts/runX509PubKeyExtraction.sh";
-        PUBKEY = vm.ffi(cmds);
     }
 
     function readX509Signature() public {
@@ -71,17 +69,26 @@ contract X509GenHelper is Test {
         string[] memory cmds = new string[](3);
         cmds[0] = "bash";
         cmds[1] = "test/scripts/runX509SigExtraction.sh";
-        cmds[2] = "signed_child.cer";
+        cmds[2] = CHILD_NAME;
         CERT_SIG = vm.ffi(cmds);
     }
 
-    function readX509Modulus() public {
+    function readX509ParentModulus() public {
         // Extract parent's modulus from x509
         string[] memory cmds = new string[](3);
         cmds[0] = "bash";
         cmds[1] = "test/scripts/runX509ModulusExtraction.sh";
-        cmds[2] = "parent.cer";
+        cmds[2] = PARENT_NAME;
         PARENT_MODULUS = vm.ffi(cmds);
+    }
+
+    function readX509ChildModulus() public {
+        // Extract parent's modulus from x509
+        string[] memory cmds = new string[](3);
+        cmds[0] = "bash";
+        cmds[1] = "test/scripts/runX509ModulusExtraction.sh";
+        cmds[2] = CHILD_NAME;
+        CHILD_MODULUS = vm.ffi(cmds);
     }
 
     function readX509Body() public {
@@ -89,7 +96,7 @@ contract X509GenHelper is Test {
         string[] memory cmds = new string[](3);
         cmds[0] = "bash";
         cmds[1] = "test/scripts/runX509BodyExtraction.sh";
-        cmds[2] = "signed_child.cer";
+        cmds[2] = CHILD_NAME;
         CERT_BYTES = vm.ffi(cmds);
     }
 }

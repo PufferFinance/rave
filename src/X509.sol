@@ -33,9 +33,10 @@ library X509Verifier {
      * @param certBody The DER-encoded body (preimage) of the x509 
      * @return Returns ...
      */
-    function getCertPubKey(bytes calldata certBody) public view {
+    function getCertPubKey(bytes calldata certBody) public view returns (bytes memory) {
         // Recover the digest using parent's public key
         // TODO
+        return certBody.substring(0, 32);
     }
 
     /*

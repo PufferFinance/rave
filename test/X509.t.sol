@@ -24,12 +24,16 @@ contract TestCertChainVerification is Test, X509GenHelper {
         console.logBytes(CERT_SIG);
 
         // Read the parent modulus
-        readX509Modulus();
+        readX509ParentModulus();
         console.logBytes(PARENT_MODULUS);
 
         // Read child cert body
         readX509Body();
         console.logBytes(CERT_BYTES);
+
+        // Read the parent modulus
+        readX509ChildModulus();
+        console.logBytes(PARENT_MODULUS);
     }
 
     function testIntelCertChain() public {
@@ -56,6 +60,11 @@ contract TestCertChainVerification is Test, X509GenHelper {
     }
 
     function testCertChainLengthOneIsValid() public {
-        require(X509Verifier.verifyChildCert(CERT_BYTES, CERT_SIG, PARENT_MODULUS, exponent));
+        assert(X509Verifier.verifyChildCert(CERT_BYTES, CERT_SIG, PARENT_MODULUS, exponent));
+    }
+
+    function testCertModulusExtracted() public {
+        bytes memory modulus = X509Verifier.getCertPubKey(CERT_BYTES);
+        assertEq(modulus, CHILD_MODULUS);
     }
 }

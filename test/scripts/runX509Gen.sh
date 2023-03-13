@@ -1,18 +1,8 @@
 #!/bin/bash
 
-# Generates two new RSA private key with number of bits passed as command line arg
 BITS=$1
-PARENT_NAME=$2
-CHILD_NAME=$3
+CERT_NAME=$2
+KEY_NAME="SelfSigningPrivateKey.pem"
 
-openssl genrsa -out parent_key.pem "$1"
-openssl genrsa -out child_key.pem "$1"
-
-# Create a parent x509 certificate with default args
-echo -e "US\nCA\nSan Francisco\nMy Organization\nMy PARENT Name\n\n\n" | openssl req -new -x509 -key parent_key.pem -out $PARENT_NAME -days 365
-
-# Create a child x509 certificate with default args
-echo -e "US\nCA\nSan Francisco\nMy Organization\nMy CHILD Name\n\n\n" | openssl req -new -x509 -key child_key.pem -out child.cer -days 365
-
-# Sign the child x509 certificate with the parent's key
-openssl x509 -in child.cer -signkey parent_key.pem -sha256 > $CHILD_NAME
+# Create a private key named $KEY_NAME and then self-sign an x509 certificate
+echo -e "US\nCA\nSan Francisco\nMy Organization\nMy PARENT Name\n\n\n" | openssl req -x509 -newkey rsa:$BITS -keyout $KEY_NAME -out $CERT_NAME -sha256 -days 365 -nodes 

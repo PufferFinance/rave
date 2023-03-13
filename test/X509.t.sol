@@ -11,29 +11,29 @@ import "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
 import "ens-contracts/dnssec-oracle/BytesUtils.sol";
 
 contract TestCertChainVerification is Test, X509GenHelper {
-    using BytesUtils for *;
+    // using BytesUtils for *;
+    using Asn1Decode for bytes;
 
     bytes exponent = hex"0000000000000000000000000000000000000000000000000000000000010001";
 
     function setUp() public {
-        // Generate new x509 parent and child certs
-        newX509Certs();
+        // Generate new self-signed x509 cert
+        newSelfSignedX509();
 
-        // Read the child cert signature
-        readX509Signature();
-        console.logBytes(CERT_SIG);
-
-        // Read the parent modulus
-        readX509ParentModulus();
-        console.logBytes(PARENT_MODULUS);
-
-        // Read child cert body
+        // Read self-signed cert's body (what was used as input to RSA-SHA256)
         readX509Body();
+        console.log("CertBody:");
         console.logBytes(CERT_BYTES);
 
-        // Read the parent modulus
-        readX509ChildModulus();
-        console.logBytes(PARENT_MODULUS);
+        // Read the self-signed cert's signature
+        readX509Signature();
+        console.log("Signature:");
+        console.logBytes(CERT_SIG);
+
+        // Read the public key's modulus
+        readX509Modulus();
+        console.log("Modulus:");
+        console.logBytes(MODULUS);
     }
 
     function testIntelCertChain() public {
@@ -59,12 +59,14 @@ contract TestCertChainVerification is Test, X509GenHelper {
         require(X509Verifier.verifyChildCert(certBytes, certSig, intelRootModulus, exponent));
     }
 
-    function testCertChainLengthOneIsValid() public {
-        assert(X509Verifier.verifyChildCert(CERT_BYTES, CERT_SIG, PARENT_MODULUS, exponent));
+    function testSelfSignedCertIsValid() public {
+        assert(X509Verifier.verifyChildCert(CERT_BYTES, CERT_SIG, MODULUS, exponent));
     }
 
     function testCertModulusExtracted() public {
         bytes memory modulus = X509Verifier.getCertPubKey(CERT_BYTES);
-        assertEq(modulus, CHILD_MODULUS);
+
+        console.logBytes(modulus);
+        assertEq(modulus, MODULUS);
     }
 }

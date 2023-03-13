@@ -42,61 +42,49 @@ contract KeyGenHelper is Test {
     }
 }
 
+// Helper functions to generate self-signed x509 and methods to extract relevant info
 contract X509GenHelper is Test {
-    bytes PUBKEY;
     bytes CERT_BYTES;
     bytes CERT_SIG;
-    bytes PARENT_MODULUS;
-    bytes CHILD_MODULUS;
+    bytes MODULUS;
 
-    string PARENT_NAME = "parent.cer";
-    string CHILD_NAME = "signed_child.cer";
+    string KEY_BITS = "512";
+    string X509_NAME = "SelfSignedx509.pem";
 
-    function newX509Certs() public {
-        // Generate two new 4096b RSA private keys and x509 certs
-        // The parent key signs the child certificate
-        string[] memory cmds = new string[](5);
+    function newSelfSignedX509() public {
+        // Generate a new KEY_BITS length RSA private key and self-sign an x509 certificate
+        string[] memory cmds = new string[](4);
         cmds[0] = "bash";
         cmds[1] = "test/scripts/runX509Gen.sh";
-        cmds[2] = "4096";
-        cmds[3] = PARENT_NAME;
-        cmds[4] = CHILD_NAME;
+        cmds[2] = KEY_BITS;
+        cmds[3] = X509_NAME;
         vm.ffi(cmds);
     }
 
     function readX509Signature() public {
-        // Extract x509 signature from child cert
+        // Extract signature from self-signed x509 cert
         string[] memory cmds = new string[](3);
         cmds[0] = "bash";
         cmds[1] = "test/scripts/runX509SigExtraction.sh";
-        cmds[2] = CHILD_NAME;
+        cmds[2] = X509_NAME;
         CERT_SIG = vm.ffi(cmds);
     }
 
-    function readX509ParentModulus() public {
-        // Extract parent's modulus from x509
+    function readX509Modulus() public {
+        // Extract modulus from self-signed x509
         string[] memory cmds = new string[](3);
         cmds[0] = "bash";
         cmds[1] = "test/scripts/runX509ModulusExtraction.sh";
-        cmds[2] = PARENT_NAME;
-        PARENT_MODULUS = vm.ffi(cmds);
-    }
-
-    function readX509ChildModulus() public {
-        // Extract parent's modulus from x509
-        string[] memory cmds = new string[](3);
-        cmds[0] = "bash";
-        cmds[1] = "test/scripts/runX509ModulusExtraction.sh";
-        cmds[2] = CHILD_NAME;
-        CHILD_MODULUS = vm.ffi(cmds);
+        cmds[2] = X509_NAME;
+        MODULUS = vm.ffi(cmds);
     }
 
     function readX509Body() public {
-        // Extract child cert's body
+        // Extract self-signed x509 body
         string[] memory cmds = new string[](3);
         cmds[0] = "bash";
         cmds[1] = "test/scripts/runX509BodyExtraction.sh";
-        cmds[2] = CHILD_NAME;
+        cmds[2] = X509_NAME;
         CERT_BYTES = vm.ffi(cmds);
     }
 }

@@ -52,14 +52,16 @@ contract X509GenHelper is Test {
 
     string KEY_BITS = "512";
     string X509_NAME = "SelfSignedx509.pem";
+    string X509_PRIV_KEY_NAME = "x509SigningKey.pem";
 
     function newSelfSignedX509() public {
         // Generate a new KEY_BITS length RSA private key and self-sign an x509 certificate
-        string[] memory cmds = new string[](4);
+        string[] memory cmds = new string[](5);
         cmds[0] = "bash";
         cmds[1] = "test/scripts/runX509Gen.sh";
         cmds[2] = KEY_BITS;
         cmds[3] = X509_NAME;
+        cmds[4] = X509_PRIV_KEY_NAME;
         vm.ffi(cmds);
     }
 

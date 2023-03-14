@@ -8,7 +8,6 @@ import hashlib
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
-from eth_utils import to_bytes, encode_hex, to_hex
 import eth_abi
 
 mrenclave_offset = 112
@@ -19,7 +18,6 @@ quote_body_length = 432
 def build_quote_body(mre, mrs, payload) -> bytes:
     assert len(mre) == 32
     assert len(mrs) == 32
-    assert len(payload) <= 64
     assert len(payload) <= 64
     body_bytes = bytes(mrenclave_offset) + mre
     body_bytes += bytes(mrsigner_offset - len(body_bytes)) + mrs
@@ -32,7 +30,7 @@ def mock_evidence(mrenclave, mrsigner, payload):
     quote_body = build_quote_body(mrenclave, mrsigner, payload)
     assert mrenclave == bytes(quote_body[mrenclave_offset:mrenclave_offset+32])
     assert mrsigner == bytes(quote_body[mrsigner_offset:mrsigner_offset+32])
-    assert payload == bytes(quote_body[payload_offset:payload_offset+64])
+    assert payload == bytes(quote_body[payload_offset:payload_offset+len(payload)])
 
     quote_body = base64.b64encode(quote_body).decode('utf-8')
 
@@ -53,28 +51,24 @@ def sign(fname, message) -> bytes:
     with open(fname, 'rb') as f:
         private_key = serialization.load_pem_private_key(f.read(), password=None, backend=default_backend())
 
-    hash_func = hashlib.sha256()
-    hash_func.update(message)
-    digest = hash_func.digest()
-    signature = private_key.sign(digest, padding.PKCS1v15(), hashes.SHA256())
+    signature = private_key.sign(message, padding.PKCS1v15(), hashes.SHA256())
     return signature
 
 
 def main():
-    # mrenclave = bytes.from_hex(sys.argv[1])
-    # mrsigner = bytes.from_hex(sys.argv[2])
-    # payload = bytes.from_hex(sys.argv[3])
-
-    exp_mre = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
-    exp_mrs = "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"
-    exp_payload = "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f"
-    mrenclave = bytes.fromhex(exp_mre)
-    mrsigner = bytes.fromhex(exp_mrs)
-    payload = bytes.fromhex(exp_payload)
+    # Pad inputs
+    stripped_mre = sys.argv[1].lstrip('0x')
+    stripped_mrs = sys.argv[2].lstrip('0x')
+    stripped_payload = sys.argv[3].lstrip('0x')
+    mrenclave = '0' * (64 - len(stripped_mre)) + stripped_mre
+    mrsigner = '0' * (64 - len(stripped_mrs)) + stripped_mrs
+    payload = '0' * (128 - len(stripped_payload)) + stripped_payload
+    mrenclave = bytes.fromhex(mrenclave)
+    mrsigner = bytes.fromhex(mrsigner)
+    payload = bytes.fromhex(payload)
 
     evidence = mock_evidence(mrenclave, mrsigner, payload)
     evidence_bytes = json.dumps(evidence).encode('utf-8')
-    # print(evidence_bytes)
 
     fname = 'x509SigningKey.pem'
     signature = sign(fname, evidence_bytes)

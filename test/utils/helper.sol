@@ -19,6 +19,11 @@ contract BytesFFIFuzzer is Test {
     function getFriendlyBytes(bytes memory _fuzzedBytes) public pure returns (bytes memory) {
         return bytes(vm.toString(_fuzzedBytes));
     }
+
+    // convert random fuzzed bytes -> hex string -> valid utf-8 bytes
+    function getFriendlyBytes32(bytes32 _fuzzedBytes) public pure returns (bytes memory) {
+        return bytes(vm.toString(_fuzzedBytes));
+    }
 }
 
 contract KeyGenHelper is Test {

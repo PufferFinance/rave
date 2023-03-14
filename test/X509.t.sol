@@ -11,8 +11,7 @@ import "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
 import "ens-contracts/dnssec-oracle/BytesUtils.sol";
 
 contract TestCertChainVerification is Test, X509GenHelper {
-    // using BytesUtils for *;
-    using Asn1Decode for bytes;
+    using BytesUtils for *;
 
     bytes exponent = hex"0000000000000000000000000000000000000000000000000000000000010001";
 
@@ -20,10 +19,15 @@ contract TestCertChainVerification is Test, X509GenHelper {
         // Generate new self-signed x509 cert
         newSelfSignedX509();
 
+        // Read self-signed DER-encoded cert
+        readX509Cert();
+        console.log("Cert:");
+        console.logBytes(CERT_BYTES);
+
         // Read self-signed cert's body (what was used as input to RSA-SHA256)
         readX509Body();
         console.log("CertBody:");
-        console.logBytes(CERT_BYTES);
+        console.logBytes(CERT_BODY_BYTES);
 
         // Read the self-signed cert's signature
         readX509Signature();
@@ -60,13 +64,21 @@ contract TestCertChainVerification is Test, X509GenHelper {
     }
 
     function testSelfSignedCertIsValid() public {
-        assert(X509Verifier.verifyChildCert(CERT_BYTES, CERT_SIG, MODULUS, exponent));
+        assert(X509Verifier.verifyChildCert(CERT_BODY_BYTES, CERT_SIG, MODULUS, exponent));
     }
 
     function testCertModulusExtracted() public {
-        bytes memory modulus = X509Verifier.getCertPubKey(CERT_BYTES);
+        (bytes memory modulus, bytes memory exponent) = X509Verifier.verifySignedX509(CERT_BYTES, MODULUS, EXPONENT);
 
-        console.logBytes(modulus);
-        assertEq(modulus, MODULUS);
+        // Correct the lengths since parsing may prepend an empty "0x00"
+        uint256 lenGot = modulus.length;
+        uint256 lenExpected = MODULUS.length;
+        if (lenGot < lenExpected) {
+            modulus = abi.encodePacked(new bytes(lenExpected - lenGot), modulus);
+        } else if (lenExpected < lenGot) {
+            MODULUS = abi.encodePacked(new bytes(lenGot - lenExpected), MODULUS);
+        }
+
+        assertEq(keccak256(modulus), keccak256(MODULUS));
     }
 }

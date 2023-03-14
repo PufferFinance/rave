@@ -45,8 +45,10 @@ contract KeyGenHelper is Test {
 // Helper functions to generate self-signed x509 and methods to extract relevant info
 contract X509GenHelper is Test {
     bytes CERT_BYTES;
+    bytes CERT_BODY_BYTES;
     bytes CERT_SIG;
     bytes MODULUS;
+    bytes EXPONENT = hex"010001";
 
     string KEY_BITS = "512";
     string X509_NAME = "SelfSignedx509.pem";
@@ -59,6 +61,15 @@ contract X509GenHelper is Test {
         cmds[2] = KEY_BITS;
         cmds[3] = X509_NAME;
         vm.ffi(cmds);
+    }
+
+    function readX509Cert() public {
+        // Get DER-encoded self-signed x509 as hex string
+        string[] memory cmds = new string[](3);
+        cmds[0] = "bash";
+        cmds[1] = "test/scripts/runX509GetDer.sh";
+        cmds[2] = X509_NAME;
+        CERT_BYTES = vm.ffi(cmds);
     }
 
     function readX509Signature() public {
@@ -85,6 +96,6 @@ contract X509GenHelper is Test {
         cmds[0] = "bash";
         cmds[1] = "test/scripts/runX509BodyExtraction.sh";
         cmds[2] = X509_NAME;
-        CERT_BYTES = vm.ffi(cmds);
+        CERT_BODY_BYTES = vm.ffi(cmds);
     }
 }

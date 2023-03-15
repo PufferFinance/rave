@@ -2,13 +2,10 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import "src/base64.sol";
+import "src/Base64Decode.sol";
 import "test/utils/helper.sol";
 
 contract TestBase64 is Base64Decoder, Test, BytesFFIFuzzer {
-    // A lookup table of decodings
-    // mapping(bytes1 => uint8) public b64Map;
-
     function testDecodeMan() public {
         string memory enc = "TWFu";
         string memory dec = decode(enc);

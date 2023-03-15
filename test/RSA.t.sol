@@ -2,95 +2,12 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-
-import "src/RSA.sol";
 import "test/utils/helper.sol";
+import "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
+import "ens-contracts/dnssec-oracle/BytesUtils.sol";
 
-contract TestModExp is Test, BytesFFIFuzzer {
-    function setUp() public {}
-
-    // test vector from https://github.com/ethereum/EIPs/blob/master/EIPS/eip-198.md
-    function testModExpVector() public {
-        bytes memory base = hex"03";
-        bytes memory exp = hex"fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2e";
-        bytes memory mod = hex"fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f";
-
-        bytes memory got = RSA.modExp(base, exp, mod);
-        bytes memory expected = hex"0000000000000000000000000000000000000000000000000000000000000001";
-
-        assertEq(keccak256(expected), keccak256(got), "ok");
-    }
-
-    function testModExpFFI() public {
-        string[] memory cmds = new string[](5);
-        cmds[0] = "python3";
-        cmds[1] = "test/scripts/runModExp.py";
-        bytes memory base = new bytes(512);
-        base[0] = hex"02";
-        bytes memory exp = new bytes(512);
-        exp[0] = hex"05";
-        bytes memory mod = new bytes(512);
-        mod[0] = hex"11";
-        cmds[2] = vm.toString(base);
-        cmds[3] = vm.toString(exp);
-        cmds[4] = vm.toString(mod);
-
-        bytes memory resp = vm.ffi(cmds);
-        bytes memory got = RSA.modExp(base, exp, mod);
-
-        console.logBytes(resp);
-        console.logBytes(got);
-
-        // 2**5 % 17 = 15
-        assertEq(keccak256(abi.encode(resp)), keccak256(abi.encode(got)));
-        assertEq(resp, got);
-    }
-
-    function testModExpFuzz(bytes memory _b, bytes memory _e, bytes memory _m) public {
-        // convert fuzzed bytes to FFI friendly bytes
-        vm.assume(BytesHelper.notAllZeroes(_b));
-        vm.assume(BytesHelper.notAllZeroes(_e));
-        vm.assume(BytesHelper.notAllZeroes(_m));
-
-        bytes memory _base = getFriendlyBytes(_b);
-        bytes memory _exp = getFriendlyBytes(_e);
-        bytes memory _mod = getFriendlyBytes(_m);
-
-        console.logBytes(_base);
-        console.logBytes(_exp);
-        console.logBytes(_mod);
-        vm.assume(_mod.length == _base.length);
-        vm.assume(_mod.length == _exp.length);
-
-        string[] memory cmds = new string[](5);
-        cmds[0] = "python3";
-        cmds[1] = "test/scripts/runModExp.py";
-        cmds[2] = vm.toString(_base);
-        cmds[3] = vm.toString(_exp);
-        cmds[4] = vm.toString(_mod);
-
-        bytes memory got = RSA.modExp(_base, _exp, _mod);
-        console.logBytes(got);
-        console.log("got len: %s", got.length);
-
-        bytes memory resp = vm.ffi(cmds);
-        console.logBytes(resp);
-        console.log("resp len: %s", resp.length);
-
-        if (!BytesHelper.notAllZeroes(resp)) {
-            if (!BytesHelper.notAllZeroes(got)) {
-                // both are 0s
-                return;
-            }
-        }
-
-        assertEq(keccak256(resp), keccak256((got)));
-        assertEq(resp, got);
-    }
-}
-
-contract TestRSA is Test, BytesFFIFuzzer {
-    bytes PUBKEY;
+contract TestRSA is Test, KeyGenHelper, BytesFFIFuzzer {
+    using BytesUtils for *;
 
     function setUp() public {
         // Generate a new 4096b RSA private key
@@ -99,21 +16,17 @@ contract TestRSA is Test, BytesFFIFuzzer {
         readRsaPubKey();
     }
 
-    function newRsaKeypair() public {
-        // Generate a new 4096b RSA private key
-        string[] memory cmds = new string[](3);
-        cmds[0] = "bash";
-        cmds[1] = "test/scripts/runRSAKeygen.sh";
-        cmds[2] = "4096";
-        vm.ffi(cmds);
-    }
-
-    function readRsaPubKey() public {
-        // Extract public key using openssl
-        string[] memory cmds1 = new string[](2);
-        cmds1[0] = "bash";
-        cmds1[1] = "test/scripts/runPubKeyExtraction.sh";
-        PUBKEY = vm.ffi(cmds1);
+    function testEnsRsaRecover() public {
+        bytes memory _sig = hex"57306b21925c4f51f9ea5109e79892f8f599e55d15207aaa8504f2f5184d8c3c";
+        bytes memory _pubKey = hex"95dcdfc3b42b1c55cff71501870540793855c054354ef4d2e55fb462d648f0af";
+        bytes memory _exp = hex"0000000000000000000000000000000000000000000000000000000000010001";
+        bytes memory _msg =
+            hex"9142b53464ea3543c71cf74de645f98197562edb9a064df5d6794876912fa2a9360589e3bd6163374d6108217dfd42f68725b367bb020d0ab4ade77262498ba3b80be1611d7fae308a2ec1c80b39e7487307fe6d9a2c695fb06e135a43ef65b42ec7a9e12e3343dca067fe57c1f0ab826d149c99909a7519014c17ca93492a09";
+        bytes32 _msgHash = hex"54393031ccd25d810022d0a0a4c36aac7b0d19a9340b75358fbe09e6ab1b893c";
+        assertEq(keccak256(_msg), _msgHash);
+        (bool success, bytes memory got) = RSAVerify.rsarecover(_pubKey, _exp, _sig);
+        assert(success);
+        assertEq(bytes32(got), _msgHash);
     }
 
     function testVerifyRSA256b() public {
@@ -126,8 +39,12 @@ contract TestRSA is Test, BytesFFIFuzzer {
 
         assertEq(keccak256(_msg), _msgHash);
 
-        bool got = RSA.verifyRSA(_sig, _pubKey, _exp, _msgHash);
-        assert(got);
+        (bool success, bytes memory got) = RSAVerify.rsarecover(_pubKey, _exp, _sig);
+        assert(success);
+
+        // digest is last 32 bytes
+        bytes32 recovered = got.readBytes32(got.length - 32);
+        assertEq(recovered, _msgHash);
     }
 
     function testVerifyRSA4096b() public {
@@ -142,11 +59,15 @@ contract TestRSA is Test, BytesFFIFuzzer {
 
         assertEq(keccak256(_msg), _msgHash, "hash not matching");
 
-        bool got = RSA.verifyRSA(_sig, _pubKey, _exp, _msgHash);
-        assert(got);
+        (bool success, bytes memory got) = RSAVerify.rsarecover(_pubKey, _exp, _sig);
+        assert(success);
+
+        // digest is last 32 bytes
+        bytes32 recovered = got.readBytes32(got.length - 32);
+        assertEq(recovered, _msgHash);
     }
 
-    function testVerifyRSARealIntelKey1() public view {
+    function testVerifyRSARealIntelKey1() public {
         // Signature over a RA report. _pubKey extracted from valid Intel signing cert.
         // Base64 decoded
         bytes memory _sig =
@@ -159,11 +80,15 @@ contract TestRSA is Test, BytesFFIFuzzer {
             hex"7b226964223a22323139393636323830353638383933363030353433343237353830363038313934303839373633222c2274696d657374616d70223a22323032332d30312d32305431393a34373a32382e343635343430222c2276657273696f6e223a342c226570696450736575646f6e796d223a224562724d3658365943483362726a50585432336756682f49324547357356664859682b533534666230727241715652546952544f53664c73575356545a63387772617a4747376f6f6f476f4d5537476a3554456873767344495634615970766b536b2f453354736237436147642b4979316345684c4f34475077646d77742f50584e51513368744c647933614e623769514d724e62694663646b5664562f74657064657a4d73534238476f3d222c2261647669736f727955524c223a2268747470733a2f2f73656375726974792d63656e7465722e696e74656c2e636f6d222c2261647669736f7279494473223a5b22494e54454c2d53412d3030333334222c22494e54454c2d53412d3030363135225d2c22697376456e636c61766551756f7465537461747573223a2253575f48415244454e494e475f4e4545444544222c22697376456e636c61766551756f7465426f6479223a22416741424149414d4141414e414130414141414141454a68624a6a56504a6353593552487962446e4144384141414141414141414141414141414141414141414642514c422f2b414467414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141427741414141414141414166414141414141414141453279742b444b582b797138336c7a2b686e6c586f79584f74456530505a6a376c4543666b6d5268613179414141414141414141414141414141414141414141414141414141414141414141414141414141414141434431786e6e6665724b4648443275765971545864444138695a32326b434435787737683338434d664f6e674141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141434f4b6e51656750376a4a4b435257304375776f6342316239496c6b334c78645166636d38526766776b744e374c7a67576b6d55317437477a5a66335038673263414141414141414141414141414141414141414141227d";
 
         bytes32 _msgHash = sha256(_msg);
-        bool got = RSA.verifyRSA(_sig, _pubKey, _exp, _msgHash);
-        assert(got);
+        (bool success, bytes memory got) = RSAVerify.rsarecover(_pubKey, _exp, _sig);
+        assert(success);
+
+        // digest is last 32 bytes
+        bytes32 recovered = got.readBytes32(got.length - 32);
+        assertEq(recovered, _msgHash);
     }
 
-    function testVerifyRSARealIntelKey2() public view {
+    function testVerifyRSARealIntelKey2() public {
         // Signature over a RA report. _pubKey extracted from valid Intel signing cert.
         // Base64 decoded
         bytes memory _sig =
@@ -176,8 +101,12 @@ contract TestRSA is Test, BytesFFIFuzzer {
             hex"7b226964223a22313630353730303234343838363134303335383335303037313436313436353334323938303331222c2274696d657374616d70223a22323032332d30312d32305431393a35303a32302e363737313532222c2276657273696f6e223a342c226570696450736575646f6e796d223a224562724d3658365943483362726a50585432336756682f49324547357356664859682b533534666230727241715652546952544f53664c73575356545a63387772617a4747376f6f6f476f4d5537476a3554456873767344495634615970766b536b2f453354736237436147642b4979316345684c4f34475077646d77742f50584e51513368744c647933614e623769514d724e62694663646b5664562f74657064657a4d73534238476f3d222c2261647669736f727955524c223a2268747470733a2f2f73656375726974792d63656e7465722e696e74656c2e636f6d222c2261647669736f7279494473223a5b22494e54454c2d53412d3030333334222c22494e54454c2d53412d3030363135225d2c22697376456e636c61766551756f7465537461747573223a2253575f48415244454e494e475f4e4545444544222c22697376456e636c61766551756f7465426f6479223a22416741424149414d4141414e414130414141414141454a68624a6a56504a6353593552487962446e4144384141414141414141414141414141414141414141414642514c422f2b414467414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141427741414141414141414166414141414141414141453279742b444b582b797138336c7a2b686e6c586f79584f74456530505a6a376c4543666b6d5268613179414141414141414141414141414141414141414141414141414141414141414141414141414141414141434431786e6e6665724b4648443275765971545864444138695a32326b434435787737683338434d664f6e6741414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414143664b567161302f677a57706a56516733693332327a3676636b37486c435a7842316a3456777a3141714f304141414141414141414141414141414141414141414141414141414141414141414141414141414141227d";
 
         bytes32 _msgHash = sha256(_msg);
-        bool got = RSA.verifyRSA(_sig, _pubKey, _exp, _msgHash);
-        assert(got);
+        (bool success, bytes memory got) = RSAVerify.rsarecover(_pubKey, _exp, _sig);
+        assert(success);
+
+        // digest is last 32 bytes
+        bytes32 recovered = got.readBytes32(got.length - 32);
+        assertEq(recovered, _msgHash);
     }
 
     // Test generates valid RSA sigs over fuzzed msgs (via openssl) then verifies the sigs
@@ -209,7 +138,11 @@ contract TestRSA is Test, BytesFFIFuzzer {
         bytes memory _exp = hex"0000000000000000000000000000000000000000000000000000000000010001";
 
         // signature should be valid
-        bool valid = RSA.verifyRSA(_sig, PUBKEY, _exp, _msgHash);
-        assert(valid);
+        (bool success, bytes memory got) = RSAVerify.rsarecover(PUBKEY, _exp, _sig);
+        assert(success);
+
+        // digest is last 32 bytes
+        bytes32 recovered = got.readBytes32(got.length - 32);
+        assertEq(recovered, _msgHash);
     }
 }

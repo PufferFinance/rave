@@ -3,9 +3,9 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 
-import "src/JSON.sol";
+import "src/JSONDecode.sol";
 import "test/utils/helper.sol";
-import "test/mocks/JSON.sol";
+import "test/mocks/JSONDecode.sol";
 
 abstract contract TestHappyJSON is Test, MockableJsonTypes {
     MockableJson c;

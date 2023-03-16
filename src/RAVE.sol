@@ -20,6 +20,11 @@ contract RAVE is Base64Decoder {
 
     constructor() {}
 
+    /*
+    * @dev Parses attestation report JSON, extracts quote body, then base64 decodes. Assumes the quote body is the last key-pair in the JSON.
+    * @param _report The utf-8 encoded JSON string containing the attestation report.
+    * @return The extracted and base64 decoded quote body or fail parsing.
+    */
     function extractQuoteBody(string memory _report) public view returns (bytes memory) {
         // Parse the report json
         (uint256 _ret, JSONParser.Token[] memory _tokens, uint256 _numTokens) =
@@ -37,6 +42,14 @@ contract RAVE is Base64Decoder {
         return _quoteBody;
     }
 
+    /*
+    * @dev Verifies the RSA-SHA256 signature of the attestation report.
+    * @param _report The attestation evidence report from IAS.
+    * @param _sig The RSA-SHA256 signature over the report.
+    * @param _signingMod The expected signer's RSA modulus
+    * @param _signingExp The expected signer's RSA exponent
+    * @return True if the signature is valid
+    */
     function verifyReportSignature(
         bytes memory _report,
         bytes memory _sig,
@@ -50,6 +63,13 @@ contract RAVE is Base64Decoder {
         return _success && _recovered == sha256(_report);
     }
 
+    /*
+    * @dev Parses a report, verifies the fields are correctly set, and extracts the enclave' 64 byte commitment.
+    * @param _report The attestation evidence report from IAS.
+    * @param _mrenclave The expected enclave measurement.
+    * @param _mrsigner The expected enclave signer.
+    * @return The 64 byte payload if the mrenclave and mrsigner values were correctly set.
+    */
     function verifyAndExtractReportContents(string memory _report, bytes32 _mrenclave, bytes32 _mrsigner)
         public
         view
@@ -57,6 +77,9 @@ contract RAVE is Base64Decoder {
     {
         // Extract the quote body
         bytes memory _quoteBody = extractQuoteBody(_report);
+
+        // Verify report's isvEnclaveQuoteStatus
+        // todo
 
         // Verify report's MRENCLAVE matches the expected
         bytes32 _mre = _quoteBody.readBytes32(MRENCLAVE_OFFSET);
@@ -70,6 +93,16 @@ contract RAVE is Base64Decoder {
         _payload = _quoteBody.substring(PAYLOAD_OFFSET, PAYLOAD_SIZE);
     }
 
+    /*
+    * @dev Verifies that this report was signed by the expected signer, then extracts out the report's 64 byte payload.
+    * @param _report The attestation evidence report from IAS.
+    * @param _sig The RSA-SHA256 signature over the report.
+    * @param _signingMod The expected signer's RSA modulus
+    * @param _signingExp The expected signer's RSA exponent
+    * @param _mrenclave The expected enclave measurement.
+    * @param _mrsigner The expected enclave signer.
+    * @return The 64 byte payload from the report.
+    */
     function verifyRemoteAttestation(
         string memory _report,
         bytes memory _sig,
@@ -85,6 +118,17 @@ contract RAVE is Base64Decoder {
         _payload = verifyAndExtractReportContents(_report, _mrenclave, _mrsigner);
     }
 
+    /*
+    * @dev Verifies that the _leafX509Cert was signed by the expected signer (_signingMod, _signingExp). Then uses _leafX509Cert RSA public key to verify the signature over the _report, _sig. The trusted _report is verified for correct fields and then the enclave' 64 byte commitment is extracted. 
+    * @param _report The attestation evidence report from IAS.
+    * @param _sig The RSA-SHA256 signature over the report.
+    * @param _leafX509Cert The signed leaf x509 certificate.
+    * @param _signingMod The expected signer's RSA modulus
+    * @param _signingExp The expected signer's RSA exponent
+    * @param _mrenclave The expected enclave measurement.
+    * @param _mrsigner The expected enclave signer.
+    * @return The 64 byte payload from the report.
+    */
     function rave(
         bytes memory _report,
         bytes memory _sig,

@@ -1,5 +1,12 @@
+cffi==1.15.1
+cryptography==39.0.2
 cytoolz==0.12.1
+eth-abi==3.0.1
 eth-hash==0.5.1
 eth-typing==3.2.0
 eth-utils==2.1.0
+parsimonious==0.8.1
+pycparser==2.21
+pycryptodome==3.17
+six==1.16.0
 toolz==0.12.0

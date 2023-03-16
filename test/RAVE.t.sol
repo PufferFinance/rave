@@ -17,7 +17,7 @@ abstract contract RAVETester is Test {
 
     function setUp() public virtual {}
 
-    function testVerifyRA() public {
+    function testVerifyRA() public view {
         string memory report = m.report();
         bytes memory sig = m.sig();
         bytes memory signingMod = m.signingMod();
@@ -37,14 +37,14 @@ contract TestHappyRAVE is RAVETester {
     }
 }
 
-contract RAVEFuzzTester is Test, X509GenHelper, BytesFFIFuzzer {
+abstract contract RaveFuzzTester is Test, X509GenHelper, BytesFFIFuzzer {
     using BytesUtils for *;
 
     RAVE c;
 
     function setUp() public virtual {
         // Generate new self-signed x509 cert
-        // newSelfSignedX509();
+        newSelfSignedX509();
 
         // Read self-signed DER-encoded cert
         readX509Cert();
@@ -76,12 +76,13 @@ contract RAVEFuzzTester is Test, X509GenHelper, BytesFFIFuzzer {
         assertEq(bytes(mrenclave).length, 66, "bad mre len");
         assertEq(bytes(mrsigner).length, 66, "bad mrs len");
         assertEq(bytes(payload).length, 130, "bad payload len");
-        string[] memory cmds = new string[](5);
+        string[] memory cmds = new string[](6);
         cmds[0] = "python3";
         cmds[1] = "test/scripts/runSignRandomEvidence.py";
         cmds[2] = mrenclave;
         cmds[3] = mrsigner;
         cmds[4] = payload;
+        cmds[5] = X509_PRIV_KEY_NAME;
         bytes memory resp = vm.ffi(cmds);
         return resp;
     }
@@ -103,6 +104,26 @@ contract RAVEFuzzTester is Test, X509GenHelper, BytesFFIFuzzer {
         bytes memory gotPayload = c.rave(report, signature, CERT_BYTES, MODULUS, EXPONENT, mrenclave, mrsigner);
 
         // Verify it matches the expected payload
-        assert(keccak256(gotPayload.substring(0, 64)) == keccak256(p.substring(0, 64)));
+        assertEq(keccak256(gotPayload.substring(0, 64)), keccak256(p.substring(0, 64)));
     }
+}
+
+contract Rave512BitFuzzTester is RaveFuzzTester {
+    constructor() X509GenHelper("512") {}
+}
+
+contract Rave1024BitFuzzTester is RaveFuzzTester {
+    constructor() X509GenHelper("1024") {}
+}
+
+contract Rave2048BitFuzzTester is RaveFuzzTester {
+    constructor() X509GenHelper("2048") {}
+}
+
+contract Rave3072BitFuzzTester is RaveFuzzTester {
+    constructor() X509GenHelper("3072") {}
+}
+
+contract Rave4096BitFuzzTester is RaveFuzzTester {
+    constructor() X509GenHelper("4096") {}
 }

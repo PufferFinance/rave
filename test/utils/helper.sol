@@ -49,15 +49,19 @@ contract KeyGenHelper is Test {
 
 // Helper functions to generate self-signed x509 and methods to extract relevant info
 contract X509GenHelper is Test {
-    bytes CERT_BYTES;
-    bytes CERT_BODY_BYTES;
-    bytes CERT_SIG;
-    bytes MODULUS;
-    bytes EXPONENT = hex"010001";
+    bytes public CERT_BYTES;
+    bytes public CERT_BODY_BYTES;
+    bytes public CERT_SIG;
+    bytes public MODULUS;
+    bytes public EXPONENT = hex"010001";
 
-    string KEY_BITS = "512";
-    string X509_NAME = "SelfSignedx509.pem";
-    string X509_PRIV_KEY_NAME = "x509SigningKey.pem";
+    string KEY_BITS;
+    string X509_NAME = "/tmp/SelfSignedx509.pem";
+    string X509_PRIV_KEY_NAME = "/tmp/x509SigningKey.pem";
+
+    constructor(string memory keyBits) {
+        KEY_BITS = keyBits;
+    }
 
     function newSelfSignedX509() public {
         // Generate a new KEY_BITS length RSA private key and self-sign an x509 certificate

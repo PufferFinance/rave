@@ -60,6 +60,7 @@ def main():
     stripped_mre = sys.argv[1].lstrip('0x')
     stripped_mrs = sys.argv[2].lstrip('0x')
     stripped_payload = sys.argv[3].lstrip('0x')
+
     mrenclave = '0' * (64 - len(stripped_mre)) + stripped_mre
     mrsigner = '0' * (64 - len(stripped_mrs)) + stripped_mrs
     payload = '0' * (128 - len(stripped_payload)) + stripped_payload
@@ -70,7 +71,7 @@ def main():
     evidence = mock_evidence(mrenclave, mrsigner, payload)
     evidence_bytes = json.dumps(evidence).encode('utf-8')
 
-    fname = 'x509SigningKey.pem'
+    fname = sys.argv[4]
     signature = sign(fname, evidence_bytes)
 
     # abi encode bytes

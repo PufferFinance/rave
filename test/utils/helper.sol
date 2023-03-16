@@ -56,8 +56,8 @@ contract X509GenHelper is Test {
     bytes public EXPONENT = hex"010001";
 
     string KEY_BITS;
-    string X509_NAME = "SelfSignedx509.pem";
-    string X509_PRIV_KEY_NAME = "x509SigningKey.pem";
+    string X509_NAME = "/tmp/SelfSignedx509.pem";
+    string X509_PRIV_KEY_NAME = "/tmp/x509SigningKey.pem";
 
     constructor(string memory keyBits) {
         KEY_BITS = keyBits;

@@ -37,14 +37,14 @@ contract TestHappyRAVE is RAVETester {
     }
 }
 
-contract RAVEFuzzTester is Test, X509GenHelper, BytesFFIFuzzer {
+abstract contract RaveFuzzTester is Test, X509GenHelper, BytesFFIFuzzer {
     using BytesUtils for *;
 
     RAVE c;
 
     function setUp() public virtual {
         // Generate new self-signed x509 cert
-        // newSelfSignedX509();
+        newSelfSignedX509();
 
         // Read self-signed DER-encoded cert
         readX509Cert();
@@ -105,4 +105,24 @@ contract RAVEFuzzTester is Test, X509GenHelper, BytesFFIFuzzer {
         // Verify it matches the expected payload
         assert(keccak256(gotPayload.substring(0, 64)) == keccak256(p.substring(0, 64)));
     }
+}
+
+contract Rave512BitFuzzTester is RaveFuzzTester {
+    constructor() X509GenHelper("512") {}
+}
+
+contract Rave1024BitFuzzTester is RaveFuzzTester {
+    constructor() X509GenHelper("1024") {}
+}
+
+contract Rave2048BitFuzzTester is RaveFuzzTester {
+    constructor() X509GenHelper("2048") {}
+}
+
+contract Rave3072BitFuzzTester is RaveFuzzTester {
+    constructor() X509GenHelper("3072") {}
+}
+
+contract Rave4096BitFuzzTester is RaveFuzzTester {
+    constructor() X509GenHelper("4096") {}
 }

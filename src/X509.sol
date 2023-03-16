@@ -91,8 +91,13 @@ library X509Verifier {
         // Traverse to first child of tbsCertificate
         uint256 ptr = cert.firstChildOf(tbsPtr);
 
+        // Account for v1 vs v3
+        if (cert[NodePtr.ixs(ptr)] == 0xa0) {
+            ptr = cert.nextSiblingOf(ptr);
+        }
+
         // Extract serialNumber (CertificateSerialNumber)
-        uint256 serialNumber = uint160(cert.uintAt(ptr));
+        // uint256 serialNumber = uint160(cert.uintAt(ptr));
 
         // Skip the next 3 fields (signature, issuer, validity, subject)
         ptr = cert.nextSiblingOf(ptr); // point to signature

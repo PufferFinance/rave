@@ -18,6 +18,9 @@ contract RAVE is Base64Decoder {
     uint256 constant PAYLOAD_OFFSET = 368;
     uint256 constant PAYLOAD_SIZE = 64;
 
+    bytes32 constant OK_STATUS = keccak256("OK");
+    bytes32 constant HARDENING_STATUS = keccak256("SW_HARDENING_NEEDED");
+
     constructor() {}
 
     /*
@@ -31,6 +34,12 @@ contract RAVE is Base64Decoder {
             JSONParser.parse(_report, MAX_JSON_ELEMENTS);
         assert(_ret == JSONParser.RETURN_SUCCESS);
         assert(_numTokens == MAX_JSON_ELEMENTS);
+
+        // Verify report's isvEnclaveQuoteStatus
+        JSONParser.Token memory _statusToken = _tokens[_numTokens - 3];
+        string memory _encQuoteStatus = JSONParser.getBytes(_report, _statusToken.start, _statusToken.end);
+        bytes32 status = keccak256(bytes(_encQuoteStatus));
+        require(status == OK_STATUS || status == HARDENING_STATUS, "bad isvEnclaveQuoteStatus");
 
         // Extract quote body (positioned at end of report)
         JSONParser.Token memory _lastToken = _tokens[_numTokens - 1];
@@ -77,9 +86,6 @@ contract RAVE is Base64Decoder {
     {
         // Extract the quote body
         bytes memory _quoteBody = extractQuoteBody(_report);
-
-        // Verify report's isvEnclaveQuoteStatus
-        // todo
 
         // Verify report's MRENCLAVE matches the expected
         bytes32 _mre = _quoteBody.readBytes32(MRENCLAVE_OFFSET);

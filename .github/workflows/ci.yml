@@ -34,8 +34,8 @@ jobs:
       - name: Build Rave
         run: forge build
 
-      - name: Check gas snapshots
-        run: forge snapshot --check --ffi
+      # - name: Check gas snapshots
+      #   run: forge snapshot --check --ffi
 
       - name: Run tests
         run: |

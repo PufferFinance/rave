@@ -30,6 +30,9 @@ jobs:
 
       - name: Install deps
         run: forge install
+      
+      - name: Build Rave
+        run: forge build
 
       - name: Check gas snapshots
         run: forge snapshot --check

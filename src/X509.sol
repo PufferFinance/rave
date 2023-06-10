@@ -82,7 +82,7 @@ library X509Verifier {
         bytes memory signature = cert.bytesAt(sigPtr);
 
         // Verify the parent signed the certBody
-        require(verifyChildCert(certBody, signature, parentMod, parentExp));
+        require(verifyChildCert(certBody, signature, parentMod, parentExp), "verifyChildCert fail");
 
         //  ----------------
         // Begin traversing the tbsCertificate

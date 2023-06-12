@@ -34,17 +34,28 @@ def mock_evidence(mrenclave, mrsigner, payload):
     quote_body = base64.b64encode(quote_body).decode('utf-8')
 
     evidence = {
-        "id":'"142090828149453720542199954221331392599"',
-        "timestamp":'"2023-02-15T01:24:57.989456"',
+        "id":"142090828149453720542199954221331392599",
+        "timestamp":"2023-02-15T01:24:57.989456",
         "version":4,
-        "epidPseudonym":'"EbrM6X6YCH3brjPXT23gVh/I2EG5sVfHYh+S54fb0rrAqVRTiRTOSfLsWSVTZc8wrazGG7oooGoMU7Gj5TEhsvsDIV4aYpvkSk/E3Tsb7CaGd+Iy1cEhLO4GPwdmwt/PXNQQ3htLdy3aNb7iQMrNbiFcdkVdV/tepdezMsSB8Go="',
+        "epidPseudonym":"EbrM6X6YCH3brjPXT23gVh/I2EG5sVfHYh+S54fb0rrAqVRTiRTOSfLsWSVTZc8wrazGG7oooGoMU7Gj5TEhsvsDIV4aYpvkSk/E3Tsb7CaGd+Iy1cEhLO4GPwdmwt/PXNQQ3htLdy3aNb7iQMrNbiFcdkVdV/tepdezMsSB8Go=",
         "advisoryURL":"https://security-center.intel.com",
-        # "advisoryIDs":["INTEL-SA-00334","INTEL-SA-00615"],
-        "advisoryIDs":'["INTEL-SA-00334","INTEL-SA-00615"]',
-        "isvEnclaveQuoteStatus":'"OK"',
-        "isvEnclaveQuoteBody": f'"{quote_body}"'
+        "advisoryIDs":["INTEL-SA-00334","INTEL-SA-00615"],
+        "isvEnclaveQuoteStatus":"OK",
+        "isvEnclaveQuoteBody": f"{quote_body}"
     }
     return evidence 
+
+def prepare_values(e: dict) -> bytes:
+        vs = []
+        for v in e.values():
+            if type(v) != str:
+                # handle lists and integers
+                vs.append(json.dumps(v).replace(" ", "").encode('utf-8'))
+            else:
+                vs.append(v.encode('utf-8'))
+        values_payload = eth_abi.encode(['bytes'] * len(vs), vs)
+        return values_payload
+
 
 def sign(fname, message) -> bytes:
     # Load the private key from a file
@@ -71,22 +82,15 @@ def main():
     # mock json report
     evidence = mock_evidence(mrenclave, mrsigner, payload)
 
-    # json -> bytes to sign
-    evidence_bytes = json.dumps(evidence).encode('utf-8')
+    # json -> bytes to sign (ignoring whitespace)
+    evidence_bytes = json.dumps(evidence).replace(" ", "").encode('utf-8')
 
     # sign json bytes
     fname = sys.argv[4]
     signature = sign(fname, evidence_bytes)
 
-    # convert JSON values to bytes to send to contract 
-    # values = [str(v).encode('utf-8') for v in list(evidence.values())]
-    values = [str(v).replace('"', '\\"') for v in list(evidence.values())]
-    # values = [str(v) for v in list(evidence.values())]
-    # print(evidence['advisoryIDs'])
-    # print(values)
-
-    values_payload = eth_abi.encode(['string'] * len(values), values)
-    # values_payload = eth_abi.encode(['bytes'] * len(values), values)
+    # convert JSON values to abi-encoded bytes to send to contract 
+    values_payload = prepare_values(evidence)
 
     # abi encode bytes
     ffi_payload = eth_abi.encode(['bytes', 'bytes'], [signature, values_payload])

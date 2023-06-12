@@ -7,9 +7,7 @@ import "src/JSONBuilder.sol";
 import "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
 import "ens-contracts/dnssec-oracle/BytesUtils.sol";
 
-import "forge-std/Test.sol";
-
-contract RAVE2 is Base64Decoder, JSONBuilder, Test {
+contract RAVE2 is Base64Decoder, JSONBuilder {
     using BytesUtils for *;
 
     uint256 constant MAX_JSON_ELEMENTS = 19;
@@ -98,10 +96,8 @@ contract RAVE2 is Base64Decoder, JSONBuilder, Test {
         // Reconstruct the JSON report that was signed
         bytes memory _report = bytes(buildJSON(_reportValues));
 
-        console.logBytes(_report);
-
         // Verify the report was signed by the _SigningPK
-        require(verifyReportSignature(_report, _sig, _signingMod, _signingExp), "bad signature");
+        require(verifyReportSignature(_report, _sig, _signingMod, _signingExp), "bad rpt sig");
 
         // Verify the report's contents match the expected
         _payload = verifyReportContents(_reportValues, _mrenclave, _mrsigner);

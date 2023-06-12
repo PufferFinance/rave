@@ -114,53 +114,26 @@ abstract contract RaveFuzzTester is Test, X509GenHelper, BytesFFIFuzzer {
 
         // Split response into a signature and the report JSON values
         (
-            string memory v0,
-            string memory v1,
-            string memory v2,
-            string memory v3,
-            string memory v4,
-            string memory v5,
-            string memory v6,
-            string memory v7
-        ) = abi.decode(values, (string, string, string, string, string, string, string, string));
-        // (
-        //     bytes memory v0,
-        //     bytes memory v1,
-        //     bytes memory v2,
-        //     bytes memory v3,
-        //     bytes memory v4,
-        //     bytes memory v5,
-        //     bytes memory v6,
-        //     bytes memory v7
-        // ) = abi.decode(values, (bytes, bytes, bytes, bytes, bytes, bytes, bytes, bytes));
-        jsonValues =
-            JSONBuilder.Values(bytes(v0), bytes(v1), bytes(v2), bytes(v3), bytes(v4), bytes(v5), bytes(v6), bytes(v7));
+            bytes memory v0,
+            bytes memory v1,
+            bytes memory v2,
+            bytes memory v3,
+            bytes memory v4,
+            bytes memory v5,
+            bytes memory v6,
+            bytes memory v7
+        ) = abi.decode(values, (bytes, bytes, bytes, bytes, bytes, bytes, bytes, bytes));
 
-        // jsonValues = JSONBuilder.Values(v0, v1, v2, v3, v4, v5, v6, v7);
-        // jsonValues.id = bytes(v0);
-        // jsonValues.timestamp = bytes(v1);
-        // jsonValues.version = bytes(v2);
-        // jsonValues.epidPseudonym = bytes(v3);
-        // jsonValues.advisoryURL = bytes(v4);
-        // jsonValues.advisoryIDs = bytes(v5);
-        // jsonValues.isvEnclaveQuoteStatus = bytes(v6);
-        // jsonValues.isvEnclaveQuoteBody = bytes(v7);
+        jsonValues = JSONBuilder.Values(v0, v1, v2, v3, v4, v5, v6, v7);
 
         return (signature, jsonValues);
     }
 
-    // function testGenMockEvidence(bytes32 mrenclave, bytes32 mrsigner, bytes memory p) public {
-    function testGenMockEvidence() public {
-        bytes32 mrenclave = hex"d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f";
-        bytes32 mrsigner = hex"d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f";
-        bytes memory p =
-            hex"a4f1e2de42ade42856a6e7b029432278d76ad1c3e86ceccd6f2f46532861c20c0615a3b4f8a3e283d23c09255e51360e00000000000000000000000000000000";
-        // vm.assume(p.length >= 64);
+    function testGenMockEvidence(bytes32 mrenclave, bytes32 mrsigner, bytes memory p) public {
+        vm.assume(p.length >= 64);
 
         // Convert the random bytes into valid utf-8 bytes
         bytes memory payload = getFriendlyBytes(p).substring(0, 130);
-        console.log("payload");
-        console.logBytes(payload);
 
         // Request new RA evidence
         (bytes memory signature, JSONBuilder.Values memory jsonValues) =
@@ -169,37 +142,27 @@ abstract contract RaveFuzzTester is Test, X509GenHelper, BytesFFIFuzzer {
         // Run rave to extract its payload
         bytes memory gotPayload = c.rave(jsonValues, signature, CERT_BYTES, MODULUS, EXPONENT, mrenclave, mrsigner);
 
-        console.log("here2");
-
         // Verify it matches the expected payload
         assertEq(keccak256(gotPayload.substring(0, 64)), keccak256(p.substring(0, 64)));
     }
-
-    // function testX509() public {
-    //     console.logBytes(CERT_BYTES);
-    //     console.logBytes(MODULUS);
-    //     console.logBytes(EXPONENT);
-    //     (bytes memory _leafCertModulus, bytes memory _leafCertExponent) =
-    //         X509Verifier.verifySignedX509(CERT_BYTES, MODULUS, EXPONENT);
-    // }
 }
 
 contract Rave512BitFuzzTester is RaveFuzzTester {
     constructor() X509GenHelper("512") {}
 }
 
-// contract Rave1024BitFuzzTester is RaveFuzzTester {
-//     constructor() X509GenHelper("1024") {}
-// }
+contract Rave1024BitFuzzTester is RaveFuzzTester {
+    constructor() X509GenHelper("1024") {}
+}
 
-// contract Rave2048BitFuzzTester is RaveFuzzTester {
-//     constructor() X509GenHelper("2048") {}
-// }
+contract Rave2048BitFuzzTester is RaveFuzzTester {
+    constructor() X509GenHelper("2048") {}
+}
 
-// contract Rave3072BitFuzzTester is RaveFuzzTester {
-//     constructor() X509GenHelper("3072") {}
-// }
+contract Rave3072BitFuzzTester is RaveFuzzTester {
+    constructor() X509GenHelper("3072") {}
+}
 
-// contract Rave4096BitFuzzTester is RaveFuzzTester {
-//     constructor() X509GenHelper("4096") {}
-// }
+contract Rave4096BitFuzzTester is RaveFuzzTester {
+    constructor() X509GenHelper("4096") {}
+}

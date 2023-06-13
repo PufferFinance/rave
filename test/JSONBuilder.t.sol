@@ -45,9 +45,6 @@ contract TestJSONBuilder is Test, JSONBuilder {
         );
         string memory built = buildJSON(v);
         bytes32 builtHash = keccak256(abi.encodePacked(built));
-        // console.log(built);
-        // console.log(expected);
-
         assertEq(builtHash, expectedHash, "built does not match expected");
     }
 
@@ -66,8 +63,6 @@ contract TestJSONBuilder is Test, JSONBuilder {
 
         string memory built = customBuilder.buildJSON(values);
         bytes32 builtHash = keccak256(abi.encodePacked(built));
-        // console.log(built);
-        // console.log(expected);
         assertEq(builtHash, expectedHash, "built does not match expected");
     }
 }

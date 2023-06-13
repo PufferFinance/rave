@@ -13,12 +13,12 @@ abstract contract RAVETester is Test {
     using BytesUtils for *;
 
     MockEvidence m;
-    RAVE c;
+    RAVEBase c;
 
     function setUp() public virtual {}
 
     function testVerifyRA() public view {
-        string memory report = m.report();
+        bytes memory report = m.report();
         bytes memory sig = m.sig();
         bytes memory signingMod = m.signingMod();
         bytes memory signingExp = m.signingExp();
@@ -30,7 +30,7 @@ abstract contract RAVETester is Test {
     }
 
     function testVerifyRave() public view {
-        string memory report = m.report();
+        bytes memory report = m.report();
         bytes memory sig = m.sig();
         bytes memory signingCert = m.signingCert();
         bytes32 mrenclave = m.mrenclave();
@@ -53,15 +53,27 @@ abstract contract RAVETester is Test {
 
 contract TestHappyRAVE is RAVETester {
     function setUp() public override {
-        m = new ValidBLSEvidence();
+        m = new ValidBLSEvidenceJSONDecoded();
         c = new RAVE();
+    }
+}
+
+contract TestHappyRAVEJSONDecode is RAVETester {
+    function setUp() public override {
+        m = new ValidBLSEvidenceJSONEncoded();
+        c = new RAVEWithJSONDecode();
     }
 }
 
 abstract contract RaveFuzzTester is Test, X509GenHelper, BytesFFIFuzzer {
     using BytesUtils for *;
 
-    RAVE c;
+    RAVEBase c;
+    bool useJSONDecode;
+
+    constructor(bool _useJSONDecode) {
+        useJSONDecode = _useJSONDecode;
+    }
 
     function setUp() public virtual {
         // Generate new self-signed x509 cert
@@ -87,25 +99,36 @@ abstract contract RaveFuzzTester is Test, X509GenHelper, BytesFFIFuzzer {
         console.log("Modulus:");
         console.logBytes(MODULUS);
 
-        c = new RAVE();
+        if (useJSONDecode) {
+            c = new RAVEWithJSONDecode();
+        } else {
+            c = new RAVE();
+        }
     }
 
     function genNewEvidence(string memory mrenclave, string memory mrsigner, string memory payload)
         public
-        returns (bytes memory)
+        returns (bytes memory, bytes memory)
     {
         assertEq(bytes(mrenclave).length, 66, "bad mre len");
         assertEq(bytes(mrsigner).length, 66, "bad mrs len");
         assertEq(bytes(payload).length, 130, "bad payload len");
-        string[] memory cmds = new string[](6);
+        string[] memory cmds = new string[](7);
         cmds[0] = "python3";
-        cmds[1] = "test/scripts/runSignRandomEvidence.py";
+        cmds[1] = "test/scripts/runSignRandomEvidence2.py";
         cmds[2] = mrenclave;
         cmds[3] = mrsigner;
         cmds[4] = payload;
         cmds[5] = X509_PRIV_KEY_NAME;
+        cmds[6] = "False";
+        if (useJSONDecode) {
+            cmds[6] = "True";
+        }
         bytes memory resp = vm.ffi(cmds);
-        return resp;
+
+        (bytes memory signature, bytes memory values) = abi.decode(resp, (bytes, bytes));
+
+        return (signature, values);
     }
 
     function testGenMockEvidence(bytes32 mrenclave, bytes32 mrsigner, bytes memory p) public {
@@ -116,13 +139,11 @@ abstract contract RaveFuzzTester is Test, X509GenHelper, BytesFFIFuzzer {
         console.logBytes(payload);
 
         // Request new RA evidence
-        bytes memory evidence = genNewEvidence(vm.toString(mrenclave), vm.toString(mrsigner), string(payload));
-
-        // Split response into a report and signature
-        (bytes memory report, bytes memory signature) = abi.decode(evidence, (bytes, bytes));
+        (bytes memory signature, bytes memory reportValues) =
+            genNewEvidence(vm.toString(mrenclave), vm.toString(mrsigner), string(payload));
 
         // Run rave to extract its payload
-        bytes memory gotPayload = c.rave(report, signature, CERT_BYTES, MODULUS, EXPONENT, mrenclave, mrsigner);
+        bytes memory gotPayload = c.rave(reportValues, signature, CERT_BYTES, MODULUS, EXPONENT, mrenclave, mrsigner);
 
         // Verify it matches the expected payload
         assertEq(keccak256(gotPayload.substring(0, 64)), keccak256(p.substring(0, 64)));
@@ -130,21 +151,41 @@ abstract contract RaveFuzzTester is Test, X509GenHelper, BytesFFIFuzzer {
 }
 
 contract Rave512BitFuzzTester is RaveFuzzTester {
-    constructor() X509GenHelper("512") {}
+    constructor() RaveFuzzTester(false) X509GenHelper("512") {}
+}
+
+contract Rave512BitFuzzTesterUsesJSONDecode is RaveFuzzTester {
+    constructor() RaveFuzzTester(true) X509GenHelper("512") {}
 }
 
 contract Rave1024BitFuzzTester is RaveFuzzTester {
-    constructor() X509GenHelper("1024") {}
+    constructor() RaveFuzzTester(false) X509GenHelper("1024") {}
+}
+
+contract Rave1024BitFuzzTesterUsesJSONDecode is RaveFuzzTester {
+    constructor() RaveFuzzTester(true) X509GenHelper("1024") {}
 }
 
 contract Rave2048BitFuzzTester is RaveFuzzTester {
-    constructor() X509GenHelper("2048") {}
+    constructor() RaveFuzzTester(false) X509GenHelper("2048") {}
 }
 
-contract Rave3072BitFuzzTester is RaveFuzzTester {
-    constructor() X509GenHelper("3072") {}
+contract Rave2048BitFuzzTesterUsesJSONDecode is RaveFuzzTester {
+    constructor() RaveFuzzTester(true) X509GenHelper("2048") {}
+}
+
+contract Rave3076BitFuzzTester is RaveFuzzTester {
+    constructor() RaveFuzzTester(false) X509GenHelper("3076") {}
+}
+
+contract Rave3076BitFuzzTesterUsesJSONDecode is RaveFuzzTester {
+    constructor() RaveFuzzTester(true) X509GenHelper("3076") {}
 }
 
 contract Rave4096BitFuzzTester is RaveFuzzTester {
-    constructor() X509GenHelper("4096") {}
+    constructor() RaveFuzzTester(false) X509GenHelper("4096") {}
+}
+
+contract Rave4096BitFuzzTesterUsesJSONDecode is RaveFuzzTester {
+    constructor() RaveFuzzTester(true) X509GenHelper("4096") {}
 }

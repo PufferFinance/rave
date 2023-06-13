@@ -89,11 +89,15 @@ def main():
     fname = sys.argv[4]
     signature = sign(fname, evidence_bytes)
 
-    # convert JSON values to abi-encoded bytes to send to contract 
-    values_payload = prepare_values(evidence)
+    if sys.argv[5] == 'True':
+        # Send the JSON-encoded report byes
+        ffi_payload = eth_abi.encode(['bytes', 'bytes'], [signature, evidence_bytes])
+    else:
+        # convert JSON values to abi-encoded bytes to send to contract 
+        values_payload = prepare_values(evidence)
 
-    # abi encode bytes
-    ffi_payload = eth_abi.encode(['bytes', 'bytes'], [signature, values_payload])
+        # Send only the report's JSON values 
+        ffi_payload = eth_abi.encode(['bytes', 'bytes'], [signature, values_payload])
     
     # print for ffi interface
     print(ffi_payload.hex())

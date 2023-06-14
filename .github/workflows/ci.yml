@@ -1,0 +1,55 @@
+name: CI
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  run-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt  # Install dependencies from requirements.txt
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install deps
+        run: forge install
+      
+      - name: Build Rave
+        run: forge build
+
+      # - name: Check gas snapshots
+      #   run: forge snapshot --check --ffi
+
+      - name: Run tests
+        run: |
+          forge test --ffi --match-contract TestBase64
+          forge test --ffi --match-contract TestJSONBuilder
+          forge test --ffi --match-contract TestBasicJson
+          forge test --ffi --match-contract TestRemoteAttestationEvidenceJson
+          forge test --ffi --match-contract TestRSA
+          forge test --ffi --match-contract TestIntelCert
+          forge test --ffi --match-contract Test512BitCertChain
+          forge test --ffi --match-contract Test1024BitCertChain
+          forge test --ffi --match-contract Test2048BitCertChain
+          forge test --ffi --match-contract Test3072BitCertChain
+          forge test --ffi --match-contract Test4096BitCertChain
+          forge test --ffi --match-contract RaveInstanceTest
+          forge test --ffi --match-contract RaveSanityTester
+          forge test --ffi --match-contract RaveFuzzTester

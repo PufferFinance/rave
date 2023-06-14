@@ -31,9 +31,13 @@ jobs:
 
       - name: Install deps
         run: forge install
+        
+      - name: Update Forget
+        run: forge update
       
       - name: Build Rave
         run: forge build
+        
       - name: Remappings
         run: forge remappings
 

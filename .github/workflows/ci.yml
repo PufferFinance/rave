@@ -31,15 +31,16 @@ jobs:
 
       - name: Install deps
         run: forge install
+                
+      - name: Remappings
+        run: forge remappings
         
-      - name: Update Forget
+      - name: Update deps
         run: forge update
       
       - name: Build Rave
         run: forge build
-        
-      - name: Remappings
-        run: forge remappings
+
 
       # - name: Check gas snapshots
       #   run: forge snapshot --check --ffi

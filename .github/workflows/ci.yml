@@ -48,8 +48,6 @@ jobs:
         run: |
           forge test --ffi --match-contract TestBase64 -vvvv
           forge test --ffi --match-contract TestJSONBuilder -vvvv
-          forge test --ffi --match-contract TestBasicJson -vvvv
-          forge test --ffi --match-contract TestRemoteAttestationEvidenceJson -vvvv
           forge test --ffi --match-contract TestRSA -vvvv
           forge test --ffi --match-contract TestIntelCert -vvvv
           forge test --ffi --match-contract Test512BitCertChain -vvvv

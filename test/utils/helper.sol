@@ -111,4 +111,41 @@ contract X509GenHelper is Test {
         cmds[2] = X509_NAME;
         CERT_BODY_BYTES = vm.ffi(cmds);
     }
+
+    function setupFreshX509() public {
+        // Generate new self-signed x509 cert
+        newSelfSignedX509();
+
+        // Read self-signed DER-encoded cert
+        readX509Cert();
+        console.log("Cert:");
+        console.logBytes(CERT_BYTES);
+
+        // Read self-signed cert's body (what was used as input to RSA-SHA256)
+        readX509Body();
+        console.log("CertBody:");
+        console.logBytes(CERT_BODY_BYTES);
+
+        // Read the self-signed cert's signature
+        readX509Signature();
+        console.log("Signature:");
+        console.logBytes(CERT_SIG);
+
+        // Read the public key's modulus
+        readX509Modulus();
+        console.log("Modulus:");
+        console.logBytes(MODULUS);
+    }
+
+    function readCached() public {
+        // Read all previously generated x509 material
+        string[] memory cmds = new string[](3);
+        cmds[0] = "python3";
+        cmds[1] = "test/scripts/runReadCached.py";
+        cmds[2] = KEY_BITS;
+        bytes memory response = vm.ffi(cmds);
+
+        // Warning, assumed script follows this encoding
+        (CERT_BYTES, CERT_BODY_BYTES, MODULUS, CERT_SIG) = abi.decode(response, (bytes, bytes, bytes, bytes));
+    }
 }

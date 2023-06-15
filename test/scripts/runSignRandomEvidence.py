@@ -3,7 +3,6 @@
 import base64
 import sys
 import json
-import hashlib
 
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -42,9 +41,21 @@ def mock_evidence(mrenclave, mrsigner, payload):
         "advisoryURL":"https://security-center.intel.com",
         "advisoryIDs":["INTEL-SA-00334","INTEL-SA-00615"],
         "isvEnclaveQuoteStatus":"OK",
-        "isvEnclaveQuoteBody": quote_body
+        "isvEnclaveQuoteBody": f"{quote_body}"
     }
     return evidence 
+
+def prepare_values(e: dict) -> bytes:
+        vs = []
+        for v in e.values():
+            if type(v) != str:
+                # handle lists and integers
+                vs.append(json.dumps(v).replace(" ", "").encode('utf-8'))
+            else:
+                vs.append(v.encode('utf-8'))
+        values_payload = eth_abi.encode(['bytes'] * len(vs), vs)
+        return values_payload
+
 
 def sign(fname, message) -> bytes:
     # Load the private key from a file
@@ -68,14 +79,27 @@ def main():
     mrsigner = bytes.fromhex(mrsigner)
     payload = bytes.fromhex(payload)
 
+    # mock json report
     evidence = mock_evidence(mrenclave, mrsigner, payload)
-    evidence_bytes = json.dumps(evidence).encode('utf-8')
 
+    # json -> bytes to sign (ignoring whitespace)
+    evidence_bytes = json.dumps(evidence).replace(" ", "").encode('utf-8')
+
+    # sign json bytes
     fname = sys.argv[4]
     signature = sign(fname, evidence_bytes)
 
-    # abi encode bytes
-    ffi_payload = eth_abi.encode(['bytes', 'bytes'], [evidence_bytes, signature])
+    if sys.argv[5] == 'True':
+        # Send the JSON-encoded report byes
+        ffi_payload = eth_abi.encode(['bytes', 'bytes'], [signature, evidence_bytes])
+    else:
+        # convert JSON values to abi-encoded bytes to send to contract 
+        values_payload = prepare_values(evidence)
+
+        # Send only the report's JSON values 
+        ffi_payload = eth_abi.encode(['bytes', 'bytes'], [signature, values_payload])
+    
+    # print for ffi interface
     print(ffi_payload.hex())
 
 if __name__ == "__main__":

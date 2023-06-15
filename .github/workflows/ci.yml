@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+      - json
   pull_request:
 
 env:
@@ -13,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Set up Python
         uses: actions/setup-python@v2
@@ -30,26 +33,30 @@ jobs:
 
       - name: Install deps
         run: forge install
+                
+      - name: Remappings
+        run: forge remappings
       
       - name: Build Rave
         run: forge build
+
 
       # - name: Check gas snapshots
       #   run: forge snapshot --check --ffi
 
       - name: Run tests
         run: |
-          forge test --ffi --match-contract TestBase64
-          forge test --ffi --match-contract TestJSONBuilder
-          forge test --ffi --match-contract TestBasicJson
-          forge test --ffi --match-contract TestRemoteAttestationEvidenceJson
-          forge test --ffi --match-contract TestRSA
-          forge test --ffi --match-contract TestIntelCert
-          forge test --ffi --match-contract Test512BitCertChain
-          forge test --ffi --match-contract Test1024BitCertChain
-          forge test --ffi --match-contract Test2048BitCertChain
-          forge test --ffi --match-contract Test3072BitCertChain
-          forge test --ffi --match-contract Test4096BitCertChain
-          forge test --ffi --match-contract RaveInstanceTest
-          forge test --ffi --match-contract RaveSanityTester
-          forge test --ffi --match-contract RaveFuzzTester
+          forge test --ffi --match-contract TestBase64 -vvvv
+          forge test --ffi --match-contract TestJSONBuilder -vvvv
+          forge test --ffi --match-contract TestBasicJson -vvvv
+          forge test --ffi --match-contract TestRemoteAttestationEvidenceJson -vvvv
+          forge test --ffi --match-contract TestRSA -vvvv
+          forge test --ffi --match-contract TestIntelCert -vvvv
+          forge test --ffi --match-contract Test512BitCertChain -vvvv
+          forge test --ffi --match-contract Test1024BitCertChain -vvvv
+          forge test --ffi --match-contract Test2048BitCertChain -vvvv
+          forge test --ffi --match-contract Test3072BitCertChain -vvvv
+          forge test --ffi --match-contract Test4096BitCertChain -vvvv
+          forge test --ffi --match-contract RaveInstanceTest -vvvv
+          forge test --ffi --match-contract RaveSanityTester -vvvv
+          forge test --ffi --match-contract RaveFuzzTester -vvvv

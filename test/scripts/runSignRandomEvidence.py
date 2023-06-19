@@ -25,13 +25,14 @@ def build_quote_body(mre, mrs, payload) -> bytes:
     assert len(body_bytes) == quote_body_length 
     return body_bytes
 
-def mock_evidence(mrenclave, mrsigner, payload):
+def mock_evidence(mrenclave, mrsigner, payload, encode_quote=True):
     quote_body = build_quote_body(mrenclave, mrsigner, payload)
     assert mrenclave == bytes(quote_body[mrenclave_offset:mrenclave_offset+32])
     assert mrsigner == bytes(quote_body[mrsigner_offset:mrsigner_offset+32])
     assert payload == bytes(quote_body[payload_offset:payload_offset+len(payload)])
 
-    quote_body = base64.b64encode(quote_body).decode('utf-8')
+    if encode_quote:
+        quote_body = base64.b64encode(quote_body).decode('utf-8')
 
     evidence = {
         "id":"142090828149453720542199954221331392599",
@@ -78,9 +79,10 @@ def main():
     mrenclave = bytes.fromhex(mrenclave)
     mrsigner = bytes.fromhex(mrsigner)
     payload = bytes.fromhex(payload)
+    encode_quote = sys.argv[6] == 'True'
 
     # mock json report
-    evidence = mock_evidence(mrenclave, mrsigner, payload)
+    evidence = mock_evidence(mrenclave, mrsigner, payload, encode_quote)
 
     # json -> bytes to sign (ignoring whitespace)
     evidence_bytes = json.dumps(evidence).replace(" ", "").encode('utf-8')

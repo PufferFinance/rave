@@ -29,4 +29,18 @@ This directory contains the bash and Python scripts used during testing, invoked
 > Returns the RSA signature from the self-signed DER-encoded x509 certificate.
 
 ### runSignRandomEvidence.py
-> Generates a remote attestation report using supplied inputs (mrenclave, mrsigner, 64B commitment), then signs the report with the supplied self-signed x509 certificate.
+> Generates a remote attestation report using supplied inputs (mrenclave, mrsigner, 64B commitment), then signs the report with the supplied self-signed x509 certificate. 
+
+Example usage: 
+
+`python3 ./test/scripts/runSignRandomEvidence.py 0x123... 0x456... 0x789... /tmp/4906Bitx509SigningKey.pem True True`
+    
+    > This will sign a report using the supplied key file. The first `True` will request the report bytes be returned as a JSON-encoded string. The second `True` requests that the enclave quotebody be base64 encoded.
+
+`python3 ./test/scripts/runSignRandomEvidence.py 0x123... 0x456... 0x789... /tmp/4906Bitx509SigningKey.pem False True`
+    
+    > This will sign a report using the supplied key file. The first `False` will request the report *values* be returned as abi-encoded bytes (by JSON-decoding off-chain we can do cheap string concatanation on-chain). The second `True` requests that the enclave quotebody be base64 encoded.
+
+`python3 ./test/scripts/runSignRandomEvidence.py 0x123... 0x456... 0x789... /tmp/4906Bitx509SigningKey.pem False False`
+    
+    > This will sign a report using the supplied key file. The first `False` will request the report *values* be returned as abi-encoded bytes (by JSON-decoding off-chain we can do cheap string concatanation on-chain). The second `False` requests that the enclave quotebody be base64 decoded, which can be more cheaply re-encoded on-chain.

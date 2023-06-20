@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.13;
 
 import "src/X509.sol";
@@ -7,9 +7,10 @@ import "src/JSONDecode.sol";
 import "src/JSONBuilder.sol";
 import "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
 import "ens-contracts/dnssec-oracle/BytesUtils.sol";
+import "openzeppelin-contracts/utils/Base64.sol";
 import "forge-std/Test.sol";
 
-abstract contract RAVEBase is Base64Decoder {
+abstract contract RAVEBase {
     using BytesUtils for *;
 
     uint256 constant MAX_JSON_ELEMENTS = 19;
@@ -86,7 +87,7 @@ abstract contract RAVEBase is Base64Decoder {
     ) public view virtual returns (bytes memory _payload) {}
 }
 
-contract RAVE is RAVEBase, JSONBuilder {
+contract RAVEWithBase64Decode is RAVEBase, Base64Decoder, JSONBuilder {
     using BytesUtils for *;
 
     constructor() {}
@@ -204,7 +205,7 @@ contract RAVE is RAVEBase, JSONBuilder {
     }
 }
 
-contract RAVEWithJSONDecode is RAVEBase {
+contract RAVEWithJSONDecodeAndBase64Decode is Base64Decoder, RAVEBase {
     using BytesUtils for *;
 
     constructor() {}
@@ -287,6 +288,140 @@ contract RAVEWithJSONDecode is RAVEBase {
 
         // Verify the report's contents match the expected
         _payload = verifyAndExtractReportContents(_report, _mrenclave, _mrsigner);
+    }
+
+    /*
+    * @dev Verifies that the _leafX509Cert was signed by the expected signer (_signingMod, _signingExp). Then uses _leafX509Cert RSA public key to verify the signature over the _report, _sig. The trusted _report is verified for correct fields and then the enclave' 64 byte commitment is extracted. 
+    * @param _report The attestation evidence report from IAS.
+    * @param _sig The RSA-SHA256 signature over the report.
+    * @param _leafX509Cert The signed leaf x509 certificate.
+    * @param _signingMod The expected signer's RSA modulus
+    * @param _signingExp The expected signer's RSA exponent
+    * @param _mrenclave The expected enclave measurement.
+    * @param _mrsigner The expected enclave signer.
+    * @return The 64 byte payload from the report.
+    */
+    function rave(
+        bytes memory _report,
+        bytes memory _sig,
+        bytes memory _leafX509Cert,
+        bytes memory _signingMod,
+        bytes memory _signingExp,
+        bytes32 _mrenclave,
+        bytes32 _mrsigner
+    ) public view override returns (bytes memory _payload) {
+        // Verify the _leafX509Cert was signed with _signingMod and _signingExp
+        (bytes memory _leafCertModulus, bytes memory _leafCertExponent) =
+            X509Verifier.verifySignedX509(_leafX509Cert, _signingMod, _signingExp);
+
+        // Verify report has expected fields then extract its payload
+        _payload = verifyRemoteAttestation(_report, _sig, _leafCertModulus, _leafCertExponent, _mrenclave, _mrsigner);
+    }
+}
+
+contract RAVE is RAVEBase, JSONBuilder, Test {
+    using BytesUtils for *;
+
+    constructor() {}
+
+    /*
+    * @dev Parses a report, verifies the fields are correctly set, and extracts the enclave' 64 byte commitment.
+    * @param _reportValues The values from the attestation evidence report JSON from IAS.
+    * @param _mrenclave The expected enclave measurement.
+    * @param _mrsigner The expected enclave signer.
+    * @return The 64 byte payload if the mrenclave and mrsigner values were correctly set.
+    */
+    function verifyReportContents(Values memory _reportValues, bytes32 _mrenclave, bytes32 _mrsigner)
+        public
+        view
+        returns (bytes memory _payload)
+    {
+        // check enclave status
+        bytes32 status = keccak256(_reportValues.isvEnclaveQuoteStatus);
+        require(status == OK_STATUS || status == HARDENING_STATUS, "bad isvEnclaveQuoteStatus");
+
+        // quote body is already base64 decoded
+        bytes memory _quoteBody = _reportValues.isvEnclaveQuoteBody;
+        assert(_quoteBody.length == QUOTE_BODY_LENGTH);
+
+        // Verify report's MRENCLAVE matches the expected
+        bytes32 _mre = _quoteBody.readBytes32(MRENCLAVE_OFFSET);
+        require(_mre == _mrenclave);
+
+        // Verify report's MRSIGNER matches the expected
+        bytes32 _mrs = _quoteBody.readBytes32(MRSIGNER_OFFSET);
+        require(_mrs == _mrsigner);
+
+        // Verify report's <= 64B payload matches the expected
+        _payload = _quoteBody.substring(PAYLOAD_OFFSET, PAYLOAD_SIZE);
+    }
+
+    function buildReportBytes(bytes memory _encodedReportValues)
+        internal
+        view
+        returns (Values memory _reportValues, bytes memory _reportBytes)
+    {
+        // Decode the report JSON values
+        (
+            bytes memory _id,
+            bytes memory _timestamp,
+            bytes memory _version,
+            bytes memory _epidPseudonym,
+            bytes memory _advisoryURL,
+            bytes memory _advisoryIDs,
+            bytes memory _isvEnclaveQuoteStatus,
+            bytes memory _isvEnclaveQuoteBody
+        ) = abi.decode(_encodedReportValues, (bytes, bytes, bytes, bytes, bytes, bytes, bytes, bytes));
+
+        console.log("dec body");
+        console.logBytes(_isvEnclaveQuoteBody);
+
+        // Assumes the quote body was already decoded off-chain
+        bytes memory _encBody = bytes(Base64.encode(_isvEnclaveQuoteBody));
+        console.log("enc body");
+        console.logBytes(_encBody);
+
+        // Pack values
+        _reportValues = JSONBuilder.Values(
+            _id, _timestamp, _version, _epidPseudonym, _advisoryURL, _advisoryIDs, _isvEnclaveQuoteStatus, _encBody
+        );
+
+        // Reconstruct the JSON report that was signed
+        _reportBytes = bytes(buildJSON(_reportValues));
+
+        // Pass on the decoded value for later processing
+        _reportValues.isvEnclaveQuoteBody = _isvEnclaveQuoteBody;
+    }
+
+    /*
+    * @dev Verifies that this report was signed by the expected signer, then extracts out the report's 64 byte payload.
+    * @param _report The attestation evidence report from IAS.
+    * @param _sig The RSA-SHA256 signature over the report.
+    * @param _signingMod The expected signer's RSA modulus
+    * @param _signingExp The expected signer's RSA exponent
+    * @param _mrenclave The expected enclave measurement.
+    * @param _mrsigner The expected enclave signer.
+    * @return The 64 byte payload from the report.
+    */
+    function verifyRemoteAttestation(
+        bytes memory _report,
+        bytes memory _sig,
+        bytes memory _signingMod,
+        bytes memory _signingExp,
+        bytes32 _mrenclave,
+        bytes32 _mrsigner
+    ) public view override returns (bytes memory _payload) {
+        // Decode the encoded _report JSON values to a Values struct and reconstruct the original JSON string
+        (Values memory _reportValues, bytes memory _reportBytes) = buildReportBytes(_report);
+
+        console.log("out");
+        console.logBytes(_reportValues.isvEnclaveQuoteBody);
+
+        // Verify the report was signed by the _SigningPK
+        require(verifyReportSignature(_reportBytes, _sig, _signingMod, _signingExp), "bad rpt sig");
+
+        // Verify the report's contents match the expected
+        _payload = verifyReportContents(_reportValues, _mrenclave, _mrsigner);
     }
 
     /*

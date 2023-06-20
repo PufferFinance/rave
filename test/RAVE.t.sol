@@ -25,9 +25,7 @@ abstract contract RAVETester is Test {
         bytes32 mrenclave = m.mrenclave();
         bytes32 mrsigner = m.mrsigner();
         bytes memory payload = m.payload();
-        run_verifyRemoteAttestation(report, sig, signingMod, signingExp, mrenclave, mrsigner);
-        // bytes memory gotPayload = c.verifyRemoteAttestation(report, sig, signingMod, signingExp, mrenclave, mrsigner);
-        // assert(keccak256(gotPayload.substring(0, payload.length)) == keccak256(payload));
+        run_verifyRemoteAttestation(report, sig, signingMod, signingExp, mrenclave, mrsigner, payload);
     }
 
     // Test gas
@@ -37,10 +35,11 @@ abstract contract RAVETester is Test {
         bytes memory signingMod,
         bytes memory signingExp,
         bytes32 mrenclave,
-        bytes32 mrsigner
-    ) {
+        bytes32 mrsigner,
+        bytes memory expPayload
+    ) public view {
         bytes memory gotPayload = c.verifyRemoteAttestation(report, sig, signingMod, signingExp, mrenclave, mrsigner);
-        assert(keccak256(gotPayload.substring(0, payload.length)) == keccak256(payload));
+        assert(keccak256(gotPayload.substring(0, expPayload.length)) == keccak256(expPayload));
     }
 
     function test_VerifyRave() public view {
@@ -56,14 +55,7 @@ abstract contract RAVETester is Test {
 
         bytes memory intelRootExponent = hex"010001";
 
-        run_rave(report, sig, signingCert, intelRootModulus, intelRootModulus, mrenclave, mrsigner);
-
-        // Run rave to extract its payload
-        // bytes memory gotPayload =
-        //     c.rave(bytes(report), sig, signingCert, intelRootModulus, intelRootExponent, mrenclave, mrsigner);
-
-        // // Verify it matches the expected payload
-        // assert(keccak256(gotPayload.substring(0, payload.length)) == keccak256(payload));
+        run_rave(report, sig, signingCert, intelRootModulus, intelRootExponent, mrenclave, mrsigner, payload);
     }
 
     // Test gas
@@ -72,16 +64,17 @@ abstract contract RAVETester is Test {
         bytes memory sig,
         bytes memory signingCert,
         bytes memory intelRootModulus,
-        bytes memory intelRootModulus,
+        bytes memory intelRootExponent,
         bytes32 mrenclave,
-        bytes32 mrsigner
-    ) {
+        bytes32 mrsigner,
+        bytes memory expPayload
+    ) public view {
         // Run rave to extract its payload
         bytes memory gotPayload =
             c.rave(bytes(report), sig, signingCert, intelRootModulus, intelRootExponent, mrenclave, mrsigner);
 
         // Verify it matches the expected payload
-        assert(keccak256(gotPayload.substring(0, payload.length)) == keccak256(payload));
+        assert(keccak256(gotPayload.substring(0, expPayload.length)) == keccak256(expPayload));
     }
 }
 

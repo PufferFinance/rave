@@ -25,14 +25,13 @@ def build_quote_body(mre, mrs, payload) -> bytes:
     assert len(body_bytes) == quote_body_length 
     return body_bytes
 
-def mock_evidence(mrenclave, mrsigner, payload, encode_quote=True):
+def mock_evidence(mrenclave, mrsigner, payload):
     quote_body = build_quote_body(mrenclave, mrsigner, payload)
     assert mrenclave == bytes(quote_body[mrenclave_offset:mrenclave_offset+32])
     assert mrsigner == bytes(quote_body[mrsigner_offset:mrsigner_offset+32])
     assert payload == bytes(quote_body[payload_offset:payload_offset+len(payload)])
 
-    if encode_quote:
-        quote_body = base64.b64encode(quote_body).decode('utf-8')
+    enc_quote_body = base64.b64encode(quote_body).decode('utf-8')
 
     evidence = {
         "id":"142090828149453720542199954221331392599",
@@ -42,18 +41,23 @@ def mock_evidence(mrenclave, mrsigner, payload, encode_quote=True):
         "advisoryURL":"https://security-center.intel.com",
         "advisoryIDs":["INTEL-SA-00334","INTEL-SA-00615"],
         "isvEnclaveQuoteStatus":"OK",
-        "isvEnclaveQuoteBody": f"{quote_body}"
+        "isvEnclaveQuoteBody": f"{enc_quote_body}"
     }
-    return evidence 
+    return evidence, quote_body
 
-def prepare_values(e: dict) -> bytes:
+def prepare_values(e: dict, dec_quote_body: bytes, encode_quote: bool) -> bytes:
         vs = []
-        for v in e.values():
-            if type(v) != str:
-                # handle lists and integers
-                vs.append(json.dumps(v).replace(" ", "").encode('utf-8'))
+        for k, v in e.items():
+            # insert base64 decoded quote
+            if k == 'isvEnclaveQuoteBody' and not encode_quote:
+                vs.append(dec_quote_body)
             else:
-                vs.append(v.encode('utf-8'))
+                if type(v) != str:
+                    # handle lists and integers
+                    vs.append(json.dumps(v).replace(" ", "").encode('utf-8'))
+                else:
+                    vs.append(v.encode('utf-8'))
+
         values_payload = eth_abi.encode(['bytes'] * len(vs), vs)
         return values_payload
 
@@ -79,10 +83,11 @@ def main():
     mrenclave = bytes.fromhex(mrenclave)
     mrsigner = bytes.fromhex(mrsigner)
     payload = bytes.fromhex(payload)
+    encode_json = sys.argv[5] == 'True'
     encode_quote = sys.argv[6] == 'True'
 
     # mock json report
-    evidence = mock_evidence(mrenclave, mrsigner, payload, encode_quote)
+    evidence, dec_quote_body = mock_evidence(mrenclave, mrsigner, payload)
 
     # json -> bytes to sign (ignoring whitespace)
     evidence_bytes = json.dumps(evidence).replace(" ", "").encode('utf-8')
@@ -91,15 +96,20 @@ def main():
     fname = sys.argv[4]
     signature = sign(fname, evidence_bytes)
 
-    if sys.argv[5] == 'True':
+    if encode_json:
         # Send the JSON-encoded report byes
         ffi_payload = eth_abi.encode(['bytes', 'bytes'], [signature, evidence_bytes])
     else:
         # convert JSON values to abi-encoded bytes to send to contract 
-        values_payload = prepare_values(evidence)
+        values_payload = prepare_values(evidence, dec_quote_body, encode_quote)
 
         # Send only the report's JSON values 
         ffi_payload = eth_abi.encode(['bytes', 'bytes'], [signature, values_payload])
+
+    # save payload for debug
+    with open('/tmp/evidence.json', 'w') as f:
+        d = dict(evidence=evidence, quote_body=dec_quote_body.hex())
+        f.write(json.dumps(d))
     
     # print for ffi interface
     print(ffi_payload.hex())

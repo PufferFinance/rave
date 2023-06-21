@@ -121,14 +121,21 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
             setupFreshX509();
         }
 
-        if (useJSONDecode) {
+        if (useJSONDecode && _encodeQuote) {
+            // Runs JSON-decode and base64-decode on chain
             c = new RAVEWithJSONDecodeAndBase64Decode();
-        } else {
+            console.log("RAVEWithJSONDecodeAndBase64Decode()");
+        } else if (!useJSONDecode && _encodeQuote) {
+            // Runs JSON string concatting and base64-decode on chain
             c = new RAVEWithBase64Decode();
-        }
-
-        if (_encodeQuote) {
+            console.log("RAVEWithJSONDecode()");
+        } else if (!useJSONDecode && !_encodeQuote) {
+            // Runs JSON string concatting and base64-encoding on chain
             c = new RAVE();
+            console.log("RAVE()");
+        } else {
+            console.log("configuration not supported!");
+            revert("configuration not supported!");
         }
     }
 
@@ -146,8 +153,8 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
         cmds[3] = mrsigner;
         cmds[4] = payload;
         cmds[5] = X509_PRIV_KEY_NAME;
-        cmds[6] = "False";
-        cmds[7] = "True";
+        cmds[6] = "False"; // default requests abi-encoded JSON-decoded values
+        cmds[7] = "False"; // default requests base64-decoded quote body
 
         // Tell script to return entire report JSON as bytes to decode on-chain
         if (useJSONDecode) {
@@ -156,7 +163,7 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
 
         // Tell script to not to base64 decode quote in response
         if (encodeQuote) {
-            cmds[7] = "False";
+            cmds[7] = "True";
         }
 
         // Request .py sript to generate and sign mock RA evidence
@@ -192,10 +199,10 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
 // Test a single FuzzTest instance on one known input
 contract RaveInstanceTest is RaveFuzzer {
     // Manually adjust the parameters
-    bool constant _useJSONDecode = false;
+    bool constant _useJSONDecode = true;
     string constant keyBits = "1024";
     bool constant useCachedX509s = true;
-    bool constant _encodeQuote = false;
+    bool constant _encodeQuote = true;
 
     constructor() RaveFuzzer(_useJSONDecode, keyBits, useCachedX509s, _encodeQuote) {}
 

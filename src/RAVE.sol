@@ -417,6 +417,9 @@ contract RAVE is RAVEBase, JSONBuilder, Test {
         console.log("out");
         console.logBytes(_reportValues.isvEnclaveQuoteBody);
 
+        console.log("report bytes");
+        console.logBytes(_reportBytes);
+
         // Verify the report was signed by the _SigningPK
         require(verifyReportSignature(_reportBytes, _sig, _signingMod, _signingExp), "bad rpt sig");
 

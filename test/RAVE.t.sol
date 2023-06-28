@@ -25,9 +25,7 @@ abstract contract RAVETester is Test {
         bytes32 mrenclave = m.mrenclave();
         bytes32 mrsigner = m.mrsigner();
         bytes memory payload = m.payload();
-        run_verifyRemoteAttestation(report, sig, signingMod, signingExp, mrenclave, mrsigner);
-        // bytes memory gotPayload = c.verifyRemoteAttestation(report, sig, signingMod, signingExp, mrenclave, mrsigner);
-        // assert(keccak256(gotPayload.substring(0, payload.length)) == keccak256(payload));
+        run_verifyRemoteAttestation(report, sig, signingMod, signingExp, mrenclave, mrsigner, payload);
     }
 
     // Test gas
@@ -37,10 +35,11 @@ abstract contract RAVETester is Test {
         bytes memory signingMod,
         bytes memory signingExp,
         bytes32 mrenclave,
-        bytes32 mrsigner
-    ) {
+        bytes32 mrsigner,
+        bytes memory expPayload
+    ) public view {
         bytes memory gotPayload = c.verifyRemoteAttestation(report, sig, signingMod, signingExp, mrenclave, mrsigner);
-        assert(keccak256(gotPayload.substring(0, payload.length)) == keccak256(payload));
+        assert(keccak256(gotPayload.substring(0, expPayload.length)) == keccak256(expPayload));
     }
 
     function test_VerifyRave() public view {
@@ -56,14 +55,7 @@ abstract contract RAVETester is Test {
 
         bytes memory intelRootExponent = hex"010001";
 
-        run_rave(report, sig, signingCert, intelRootModulus, intelRootModulus, mrenclave, mrsigner);
-
-        // Run rave to extract its payload
-        // bytes memory gotPayload =
-        //     c.rave(bytes(report), sig, signingCert, intelRootModulus, intelRootExponent, mrenclave, mrsigner);
-
-        // // Verify it matches the expected payload
-        // assert(keccak256(gotPayload.substring(0, payload.length)) == keccak256(payload));
+        run_rave(report, sig, signingCert, intelRootModulus, intelRootExponent, mrenclave, mrsigner, payload);
     }
 
     // Test gas
@@ -72,16 +64,17 @@ abstract contract RAVETester is Test {
         bytes memory sig,
         bytes memory signingCert,
         bytes memory intelRootModulus,
-        bytes memory intelRootModulus,
+        bytes memory intelRootExponent,
         bytes32 mrenclave,
-        bytes32 mrsigner
-    ) {
+        bytes32 mrsigner,
+        bytes memory expPayload
+    ) public view {
         // Run rave to extract its payload
         bytes memory gotPayload =
             c.rave(bytes(report), sig, signingCert, intelRootModulus, intelRootExponent, mrenclave, mrsigner);
 
         // Verify it matches the expected payload
-        assert(keccak256(gotPayload.substring(0, payload.length)) == keccak256(payload));
+        assert(keccak256(gotPayload.substring(0, expPayload.length)) == keccak256(expPayload));
     }
 }
 
@@ -128,14 +121,21 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
             setupFreshX509();
         }
 
-        if (useJSONDecode) {
+        if (useJSONDecode && _encodeQuote) {
+            // Runs JSON-decode and base64-decode on chain
             c = new RAVEWithJSONDecodeAndBase64Decode();
-        } else {
+            console.log("RAVEWithJSONDecodeAndBase64Decode()");
+        } else if (!useJSONDecode && _encodeQuote) {
+            // Runs JSON string concatting and base64-decode on chain
             c = new RAVEWithBase64Decode();
-        }
-
-        if (_encodeQuote) {
+            console.log("RAVEWithJSONDecode()");
+        } else if (!useJSONDecode && !_encodeQuote) {
+            // Runs JSON string concatting and base64-encoding on chain
             c = new RAVE();
+            console.log("RAVE()");
+        } else {
+            console.log("configuration not supported!");
+            revert("configuration not supported!");
         }
     }
 
@@ -153,8 +153,8 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
         cmds[3] = mrsigner;
         cmds[4] = payload;
         cmds[5] = X509_PRIV_KEY_NAME;
-        cmds[6] = "False";
-        cmds[7] = "True";
+        cmds[6] = "False"; // default requests abi-encoded JSON-decoded values
+        cmds[7] = "False"; // default requests base64-decoded quote body
 
         // Tell script to return entire report JSON as bytes to decode on-chain
         if (useJSONDecode) {
@@ -163,7 +163,7 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
 
         // Tell script to not to base64 decode quote in response
         if (encodeQuote) {
-            cmds[7] = "False";
+            cmds[7] = "True";
         }
 
         // Request .py sript to generate and sign mock RA evidence
@@ -199,10 +199,10 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
 // Test a single FuzzTest instance on one known input
 contract RaveInstanceTest is RaveFuzzer {
     // Manually adjust the parameters
-    bool constant _useJSONDecode = false;
+    bool constant _useJSONDecode = true;
     string constant keyBits = "1024";
     bool constant useCachedX509s = true;
-    bool constant _encodeQuote = false;
+    bool constant _encodeQuote = true;
 
     constructor() RaveFuzzer(_useJSONDecode, keyBits, useCachedX509s, _encodeQuote) {}
 
@@ -228,30 +228,40 @@ contract RaveSanityTester is Test {
             hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
 
         bool[2] memory raveUsesJSONDecode = [true, false];
+        bool[2] memory raveUsesBase64Decode = [true, false];
         string[5] memory rsaKeySize = ["512", "1024", "2048", "3072", "4096"];
 
         for (uint256 i = 0; i < raveUsesJSONDecode.length; i++) {
             for (uint256 j = 0; j < rsaKeySize.length; j++) {
-                bool _useJSONDecode = raveUsesJSONDecode[i];
-                bool _encodeQuote = _useJSONDecode;
-                string memory _rsaKeySize = rsaKeySize[j];
+                for (uint256 k = 0; k < raveUsesBase64Decode.length; k++) {
+                    bool _useJSONDecode = raveUsesJSONDecode[i];
+                    string memory _rsaKeySize = rsaKeySize[j];
+                    bool _encodeQuote = raveUsesBase64Decode[k];
 
-                console.log(
-                    "Testing against: (_rsaKeySize, _useJSONDecode, _encodeQuote) = ({}, {}, {})",
-                    _rsaKeySize,
-                    _useJSONDecode,
-                    _encodeQuote
-                );
+                    // Skip since configuration not supported
+                    if (_useJSONDecode && !_encodeQuote) continue;
 
-                // Setup fuzzer by running openSSL via FFI or read from cache
-                RaveFuzzer c = new RaveFuzzer(_useJSONDecode, _rsaKeySize, useCachedX509s, _encodeQuote);
+                    console.log(
+                        "Testing against: (_rsaKeySize, _useJSONDecode, _encodeQuote) = ({}, {}, {})",
+                        _rsaKeySize,
+                        _useJSONDecode,
+                        _encodeQuote
+                    );
 
-                // Stall to prevent race conditions when testing against openSSL via FFI
-                for (uint256 s = 0; s < 30 ** 7; s++) {}
+                    // Setup fuzzer by running openSSL via FFI or read from cache
+                    RaveFuzzer c = new RaveFuzzer(_useJSONDecode, _rsaKeySize, useCachedX509s, _encodeQuote);
 
-                // Pass hardcoded values for sanity check
-                c.runRAVE(mrenclave, mrsigner, p);
+                    // Stall to prevent race conditions when testing against openSSL via FFI
+                    for (uint256 s = 0; s < 30 ** 7; s++) {}
+
+                    // Pass hardcoded values for sanity check
+                    c.runRAVE(mrenclave, mrsigner, p);
+
+                    break;
+                }
+                break;
             }
+            break;
         }
     }
 }
@@ -262,6 +272,7 @@ contract RaveFuzzTester is Test {
     // Warning, if true this will fail if all x509s do not already exist
     bool useCachedX509s = true;
     bool[2] raveUsesJSONDecode = [true, false];
+    bool[2] raveUsesBase64Decode = [true, false];
     string[5] rsaKeySize = ["512", "1024", "2048", "3072", "4096"];
     uint256 numFuzzers = raveUsesJSONDecode.length * rsaKeySize.length;
 
@@ -269,15 +280,20 @@ contract RaveFuzzTester is Test {
     constructor() {
         for (uint256 i = 0; i < raveUsesJSONDecode.length; i++) {
             for (uint256 j = 0; j < rsaKeySize.length; j++) {
-                bool _useJSONDecode = raveUsesJSONDecode[i];
-                bool _encodeQuote = _useJSONDecode;
-                string memory _rsaKeySize = rsaKeySize[j];
+                for (uint256 k = 0; k < raveUsesBase64Decode.length; k++) {
+                    bool _useJSONDecode = raveUsesJSONDecode[i];
+                    bool _encodeQuote = raveUsesBase64Decode[k];
+                    string memory _rsaKeySize = rsaKeySize[j];
 
-                // Setup fuzzer by running openSSL via FFI or read from cache
-                c.push(new RaveFuzzer(_useJSONDecode, _rsaKeySize, useCachedX509s, _encodeQuote));
+                    // Skip since configuration not supported
+                    if (_useJSONDecode && !_encodeQuote) continue;
 
-                // Stall to prevent race conditions when testing against openSSL via FFI
-                for (uint256 s = 0; s < 30 ** 7; s++) {}
+                    // Setup fuzzer by running openSSL via FFI or read from cache
+                    c.push(new RaveFuzzer(_useJSONDecode, _rsaKeySize, useCachedX509s, _encodeQuote));
+
+                    // Stall to prevent race conditions when testing against openSSL via FFI
+                    for (uint256 s = 0; s < 30 ** 7; s++) {}
+                }
             }
         }
     }

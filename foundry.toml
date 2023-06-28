@@ -1,8 +1,8 @@
 [profile.ci.fuzz]
-runs = 10
+runs = 100
 
 [fuzz]
-runs = 10
+runs = 100
 
 [profile.default]
 solc = "0.8.20"

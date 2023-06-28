@@ -99,13 +99,13 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
         console.logBytes(MODULUS);
     }
 
-    function testSelfSignedCertIsValid() public {
+    function testSelfSignedCertIsValid() public view {
         // Verify the pre-extracted cert body was signed with MODULUS
         assert(X509Verifier.verifyChildCert(CERT_BODY_BYTES, CERT_SIG, MODULUS, EXPONENT));
     }
 
     function testCertModulusExtracted() public {
-        (bytes memory modulus, bytes memory exponent) = X509Verifier.verifySignedX509(CERT_BYTES, MODULUS, EXPONENT);
+        (bytes memory modulus,) = X509Verifier.verifySignedX509(CERT_BYTES, MODULUS, EXPONENT);
 
         // Correct the lengths since parsing may prepend an empty "0x00"
         uint256 lenGot = modulus.length;

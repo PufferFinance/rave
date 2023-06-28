@@ -61,8 +61,8 @@ contract X509GenHelper is Test {
 
     constructor(string memory keyBits) {
         KEY_BITS = keyBits;
-        X509_NAME = string(abi.encodePacked("/tmp/", keyBits, "BitSelfSignedx509.pem"));
-        X509_PRIV_KEY_NAME = string(abi.encodePacked("/tmp/", keyBits, "Bitx509SigningKey.pem"));
+        X509_NAME = string(abi.encodePacked("/tmp/BitSelfSignedx509.pem"));
+        X509_PRIV_KEY_NAME = string(abi.encodePacked("/tmp/Bitx509SigningKey.pem"));
     }
 
     function newSelfSignedX509() public {

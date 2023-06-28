@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.13;
+pragma solidity >=0.8.0 <0.9.0;
 
-import "forge-std/Test.sol";
-
-import "src/JSONBuilder.sol";
-import "test/utils/helper.sol";
-import "test/mocks/JSONDecode.sol";
+import { Test } from "forge-std/Test.sol";
+import { CustomJSONBuilder, JSONBuilder } from "rave/JSONBuilder.sol";
 
 contract TestJSONBuilder is Test, JSONBuilder {
     string expected;

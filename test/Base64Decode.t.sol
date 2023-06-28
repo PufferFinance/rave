@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.13;
+pragma solidity >=0.8.0 <0.9.0;
 
-import "forge-std/Test.sol";
-import "src/Base64Decode.sol";
-import "test/utils/helper.sol";
-import "openzeppelin-contracts/utils/Base64.sol";
+import { Test, console } from "forge-std/Test.sol";
+import { Base64Decoder } from "rave/Base64Decode.sol";
+import { BytesFFIFuzzer, BytesHelper } from "test/utils/helper.sol";
+import { Base64 } from "openzeppelin/utils/Base64.sol";
 
 contract TestBase64 is Base64Decoder, Test, BytesFFIFuzzer {
     function testDecodeMan() public {

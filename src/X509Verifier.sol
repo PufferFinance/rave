@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.13;
+pragma solidity >=0.8.0 <0.9.0;
 
-import "src/ASN1Decode.sol";
-import "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
-import "ens-contracts/dnssec-oracle/BytesUtils.sol";
+import { Asn1Decode, NodePtr } from "rave/ASN1Decode.sol";
+import { RSAVerify } from "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
+import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 
 library X509Verifier {
     using Asn1Decode for bytes;

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.13;
+pragma solidity >=0.8.0 <0.9.0;
 
-import "forge-std/Test.sol";
-
-import "src/JSONDecode.sol";
-import "test/utils/helper.sol";
-import "test/mocks/JSONDecode.sol";
+import { Test, console } from "forge-std/Test.sol";
+import { JSONParser } from "rave/JSONDecode.sol";
+import {
+    MockableJsonTypes, MockableJson, MockBasicJson, MockRemoteAttestationEvidence
+} from "test/mocks/JSONDecode.sol";
 
 abstract contract TestHappyJSON is Test, MockableJsonTypes {
     MockableJson c;
 
-    function setUp() public virtual {}
+    function setUp() public virtual { }
 
     function testVmParseJson() public {
         string memory json = c.JSON();

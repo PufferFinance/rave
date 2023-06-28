@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.13;
+pragma solidity >=0.8.0 <0.9.0;
 
-import "forge-std/Test.sol";
-
-import "src/RAVE.sol";
-import "src/X509.sol";
-import "ens-contracts/dnssec-oracle/BytesUtils.sol";
-import "test/mocks/MockEvidence.sol";
-import "test/utils/helper.sol";
+import { Test, console } from "forge-std/Test.sol";
+import { RAVE, RAVEWithBase64Decode, RAVEWithJSONDecodeAndBase64Decode } from "rave/RAVE.sol";
+import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
+import {
+    MockEvidence,
+    ValidBLSEvidenceJSONDecodedAndBase64Decoded,
+    ValidBLSEvidenceJSONEncodedAndBase64Encoded,
+    ValidBLSEvidenceJSONDecodedAndBase64Encoded
+} from "test/mocks/MockEvidence.sol";
+import { RAVEBase } from "rave/RAVEBase.sol";
+import { X509GenHelper, BytesFFIFuzzer } from "test/utils/helper.sol";
 
 abstract contract RAVETester is Test {
     using BytesUtils for *;
@@ -15,7 +19,7 @@ abstract contract RAVETester is Test {
     MockEvidence m;
     RAVEBase c;
 
-    function setUp() public virtual {}
+    function setUp() public virtual { }
 
     function test_VerifyRA() public view {
         bytes memory report = m.report();
@@ -204,7 +208,7 @@ contract RaveInstanceTest is RaveFuzzer {
     bool constant useCachedX509s = true;
     bool constant _encodeQuote = true;
 
-    constructor() RaveFuzzer(_useJSONDecode, keyBits, useCachedX509s, _encodeQuote) {}
+    constructor() RaveFuzzer(_useJSONDecode, keyBits, useCachedX509s, _encodeQuote) { }
 
     function test() public {
         bytes32 mrenclave = hex"d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f";
@@ -252,7 +256,7 @@ contract RaveSanityTester is Test {
                     RaveFuzzer c = new RaveFuzzer(_useJSONDecode, _rsaKeySize, useCachedX509s, _encodeQuote);
 
                     // Stall to prevent race conditions when testing against openSSL via FFI
-                    for (uint256 s = 0; s < 30 ** 7; s++) {}
+                    for (uint256 s = 0; s < 30 ** 7; s++) { }
 
                     // Pass hardcoded values for sanity check
                     c.runRAVE(mrenclave, mrsigner, p);
@@ -292,7 +296,7 @@ contract RaveFuzzTester is Test {
                     c.push(new RaveFuzzer(_useJSONDecode, _rsaKeySize, useCachedX509s, _encodeQuote));
 
                     // Stall to prevent race conditions when testing against openSSL via FFI
-                    for (uint256 s = 0; s < 30 ** 7; s++) {}
+                    for (uint256 s = 0; s < 30 ** 7; s++) { }
                 }
             }
         }

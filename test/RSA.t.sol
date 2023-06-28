@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.13;
+pragma solidity >=0.8.0 <0.9.0;
 
-import "forge-std/Test.sol";
-import "test/utils/helper.sol";
-import "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
-import "ens-contracts/dnssec-oracle/BytesUtils.sol";
+import { Test, console } from "forge-std/Test.sol";
+import { KeyGenHelper, BytesFFIFuzzer, BytesHelper } from "test/utils/helper.sol";
+import { RSAVerify } from "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
+import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 
 contract TestRSA is Test, KeyGenHelper, BytesFFIFuzzer {
     using BytesUtils for *;

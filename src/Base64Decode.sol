@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.13;
+pragma solidity >=0.8.0 <0.9.0;
 
-import "ens-contracts/dnssec-oracle/BytesUtils.sol";
+import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 
 contract Base64Decoder {
     using BytesUtils for *;

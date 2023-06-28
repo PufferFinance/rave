@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.13;
+pragma solidity >=0.8.0 <0.9.0;
 
-import "src/JSONDecode.sol";
+import { JSONParser } from "rave/JSONDecode.sol";
 
 contract MockableJsonTypes {
     struct Value {
@@ -29,17 +29,17 @@ contract MockBasicJson is MockableJson {
 
     function keys() public pure override returns (string[] memory) {
         string[] memory s = new string[](3);
-        s[0] = "name";
-        s[1] = "age";
-        s[2] = "city";
+        s[0] = ".name";
+        s[1] = ".age";
+        s[2] = ".city";
         return s;
     }
 
     function values() public pure override returns (Value[] memory) {
         Value[] memory s = new Value[](3);
-        s[0] = Value({vType: JSONParser.JsmnType.STRING, v: "John", array: new string[](0)});
-        s[1] = Value({vType: JSONParser.JsmnType.PRIMITIVE, v: "30", array: new string[](0)});
-        s[2] = Value({vType: JSONParser.JsmnType.STRING, v: "New York", array: new string[](0)});
+        s[0] = Value({ vType: JSONParser.JsmnType.STRING, v: "John", array: new string[](0) });
+        s[1] = Value({ vType: JSONParser.JsmnType.PRIMITIVE, v: "30", array: new string[](0) });
+        s[2] = Value({ vType: JSONParser.JsmnType.STRING, v: "New York", array: new string[](0) });
         return s;
     }
 }
@@ -56,14 +56,14 @@ contract MockRemoteAttestationEvidence is MockableJson {
 
     function keys() public pure override returns (string[] memory) {
         string[] memory s = new string[](8);
-        s[0] = "id";
-        s[1] = "timestamp";
-        s[2] = "version";
-        s[3] = "epidPseudonym";
-        s[4] = "advisoryURL";
-        s[5] = "advisoryIDs";
-        s[6] = "isvEnclaveQuoteStatus";
-        s[7] = "isvEnclaveQuoteBody";
+        s[0] = ".id";
+        s[1] = ".timestamp";
+        s[2] = ".version";
+        s[3] = ".epidPseudonym";
+        s[4] = ".advisoryURL";
+        s[5] = ".advisoryIDs";
+        s[6] = ".isvEnclaveQuoteStatus";
+        s[7] = ".isvEnclaveQuoteBody";
         return s;
     }
 
@@ -75,9 +75,9 @@ contract MockRemoteAttestationEvidence is MockableJson {
             array: new string[](0)
         });
 
-        s[1] = Value({vType: JSONParser.JsmnType.STRING, v: "2023-01-20T19:47:28.465440", array: new string[](0)});
+        s[1] = Value({ vType: JSONParser.JsmnType.STRING, v: "2023-01-20T19:47:28.465440", array: new string[](0) });
 
-        s[2] = Value({vType: JSONParser.JsmnType.PRIMITIVE, v: "4", array: new string[](0)});
+        s[2] = Value({ vType: JSONParser.JsmnType.PRIMITIVE, v: "4", array: new string[](0) });
 
         s[3] = Value({
             vType: JSONParser.JsmnType.STRING,
@@ -86,14 +86,14 @@ contract MockRemoteAttestationEvidence is MockableJson {
         });
 
         s[4] =
-            Value({vType: JSONParser.JsmnType.STRING, v: "https://security-center.intel.com", array: new string[](0)});
+            Value({ vType: JSONParser.JsmnType.STRING, v: "https://security-center.intel.com", array: new string[](0) });
         string[] memory arr = new string[](2);
 
         arr[0] = "INTEL-SA-00334";
         arr[1] = "INTEL-SA-00615";
-        s[5] = Value({vType: JSONParser.JsmnType.ARRAY, v: "", array: arr});
+        s[5] = Value({ vType: JSONParser.JsmnType.ARRAY, v: "", array: arr });
 
-        s[6] = Value({vType: JSONParser.JsmnType.STRING, v: "SW_HARDENING_NEEDED", array: new string[](0)});
+        s[6] = Value({ vType: JSONParser.JsmnType.STRING, v: "SW_HARDENING_NEEDED", array: new string[](0) });
 
         s[7] = Value({
             vType: JSONParser.JsmnType.STRING,

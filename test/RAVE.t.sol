@@ -228,30 +228,40 @@ contract RaveSanityTester is Test {
             hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
 
         bool[2] memory raveUsesJSONDecode = [true, false];
+        bool[2] memory raveUsesBase64Decode = [true, false];
         string[5] memory rsaKeySize = ["512", "1024", "2048", "3072", "4096"];
 
         for (uint256 i = 0; i < raveUsesJSONDecode.length; i++) {
             for (uint256 j = 0; j < rsaKeySize.length; j++) {
-                bool _useJSONDecode = raveUsesJSONDecode[i];
-                bool _encodeQuote = _useJSONDecode;
-                string memory _rsaKeySize = rsaKeySize[j];
+                for (uint256 k = 0; k < raveUsesBase64Decode.length; k++) {
+                    bool _useJSONDecode = raveUsesJSONDecode[i];
+                    string memory _rsaKeySize = rsaKeySize[j];
+                    bool _encodeQuote = raveUsesBase64Decode[k];
 
-                console.log(
-                    "Testing against: (_rsaKeySize, _useJSONDecode, _encodeQuote) = ({}, {}, {})",
-                    _rsaKeySize,
-                    _useJSONDecode,
-                    _encodeQuote
-                );
+                    // Skip since configuration not supported
+                    if (_useJSONDecode && !_encodeQuote) continue;
 
-                // Setup fuzzer by running openSSL via FFI or read from cache
-                RaveFuzzer c = new RaveFuzzer(_useJSONDecode, _rsaKeySize, useCachedX509s, _encodeQuote);
+                    console.log(
+                        "Testing against: (_rsaKeySize, _useJSONDecode, _encodeQuote) = ({}, {}, {})",
+                        _rsaKeySize,
+                        _useJSONDecode,
+                        _encodeQuote
+                    );
 
-                // Stall to prevent race conditions when testing against openSSL via FFI
-                for (uint256 s = 0; s < 30 ** 7; s++) {}
+                    // Setup fuzzer by running openSSL via FFI or read from cache
+                    RaveFuzzer c = new RaveFuzzer(_useJSONDecode, _rsaKeySize, useCachedX509s, _encodeQuote);
 
-                // Pass hardcoded values for sanity check
-                c.runRAVE(mrenclave, mrsigner, p);
+                    // Stall to prevent race conditions when testing against openSSL via FFI
+                    for (uint256 s = 0; s < 30 ** 7; s++) {}
+
+                    // Pass hardcoded values for sanity check
+                    c.runRAVE(mrenclave, mrsigner, p);
+
+                    break;
+                }
+                break;
             }
+            break;
         }
     }
 }
@@ -262,6 +272,7 @@ contract RaveFuzzTester is Test {
     // Warning, if true this will fail if all x509s do not already exist
     bool useCachedX509s = true;
     bool[2] raveUsesJSONDecode = [true, false];
+    bool[2] raveUsesBase64Decode = [true, false];
     string[5] rsaKeySize = ["512", "1024", "2048", "3072", "4096"];
     uint256 numFuzzers = raveUsesJSONDecode.length * rsaKeySize.length;
 
@@ -269,15 +280,20 @@ contract RaveFuzzTester is Test {
     constructor() {
         for (uint256 i = 0; i < raveUsesJSONDecode.length; i++) {
             for (uint256 j = 0; j < rsaKeySize.length; j++) {
-                bool _useJSONDecode = raveUsesJSONDecode[i];
-                bool _encodeQuote = _useJSONDecode;
-                string memory _rsaKeySize = rsaKeySize[j];
+                for (uint256 k = 0; k < raveUsesBase64Decode.length; k++) {
+                    bool _useJSONDecode = raveUsesJSONDecode[i];
+                    bool _encodeQuote = raveUsesBase64Decode[k];
+                    string memory _rsaKeySize = rsaKeySize[j];
 
-                // Setup fuzzer by running openSSL via FFI or read from cache
-                c.push(new RaveFuzzer(_useJSONDecode, _rsaKeySize, useCachedX509s, _encodeQuote));
+                    // Skip since configuration not supported
+                    if (_useJSONDecode && !_encodeQuote) continue;
 
-                // Stall to prevent race conditions when testing against openSSL via FFI
-                for (uint256 s = 0; s < 30 ** 7; s++) {}
+                    // Setup fuzzer by running openSSL via FFI or read from cache
+                    c.push(new RaveFuzzer(_useJSONDecode, _rsaKeySize, useCachedX509s, _encodeQuote));
+
+                    // Stall to prevent race conditions when testing against openSSL via FFI
+                    for (uint256 s = 0; s < 30 ** 7; s++) {}
+                }
             }
         }
     }

@@ -6,15 +6,14 @@ import { JSONBuilder } from "rave/JSONBuilder.sol";
 import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 import { Base64 } from "openzeppelin/utils/Base64.sol";
 import { RAVEBase } from "rave/RAVEBase.sol";
-import { Test, console } from "forge-std/Test.sol";
 
 /**
  * @title RAVE
- * @author Puffer finance
+ * @author PufferFinance
  * @custom:security-contact security@puffer.fi
  * @notice RAVe is a smart contract for verifying Remote Attestation evidence.
  */
-contract RAVE is RAVEBase, JSONBuilder, Test {
+contract RAVE is RAVEBase, JSONBuilder {
     using BytesUtils for *;
 
     constructor() { }
@@ -32,12 +31,6 @@ contract RAVE is RAVEBase, JSONBuilder, Test {
     ) public view override returns (bytes memory payload) {
         // Decode the encoded report JSON values to a Values struct and reconstruct the original JSON string
         (Values memory reportValues, bytes memory reportBytes) = _buildReportBytes(report);
-
-        console.log("out");
-        console.logBytes(reportValues.isvEnclaveQuoteBody);
-
-        console.log("report bytes");
-        console.logBytes(reportBytes);
 
         // Verify the report was signed by the SigningPK
         if (!verifyReportSignature(reportBytes, sig, signingMod, signingExp)) {
@@ -68,6 +61,12 @@ contract RAVE is RAVEBase, JSONBuilder, Test {
         payload = verifyRemoteAttestation(report, sig, leafCertModulus, leafCertExponent, mrenclave, mrsigner);
     }
 
+    /*
+    * @dev Builds the JSON report string from the abi-encoded `encodedReportValues`. The assumption is that `isvEnclaveQuoteBody` value was previously base64 decoded off-chain and needs to be base64 encoded to produce the message-to-be-signed.
+    * @param encodedReportValues The values from the attestation evidence report JSON from IAS.
+    * @return reportValues The JSON values as a Values struct for easier processing downstream
+    * @return reportBytes The exact message-to-be-signed
+    */
     function _buildReportBytes(bytes memory encodedReportValues)
         internal
         view
@@ -85,15 +84,10 @@ contract RAVE is RAVEBase, JSONBuilder, Test {
             bytes memory isvEnclaveQuoteBody
         ) = abi.decode(encodedReportValues, (bytes, bytes, bytes, bytes, bytes, bytes, bytes, bytes));
 
-        console.log("dec body");
-        console.logBytes(isvEnclaveQuoteBody);
-
         // Assumes the quote body was already decoded off-chain
         bytes memory encBody = bytes(Base64.encode(isvEnclaveQuoteBody));
-        console.log("enc body");
-        console.logBytes(encBody);
 
-        // Pack values
+        // Pack values to struct
         reportValues = JSONBuilder.Values(
             id, timestamp, version, epidPseudonym, advisoryURL, advisoryIDs, isvEnclaveQuoteStatus, encBody
         );

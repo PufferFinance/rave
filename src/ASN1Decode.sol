@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
-
-import "ens-contracts/dnssec-oracle/BytesUtils.sol";
-
 // Original source: https://github.com/JonahGroendal/asn1-decode
+pragma solidity >=0.8.0 <0.9.0;
+
+import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
+
 library NodePtr {
     // Unpack first byte index
     function ixs(uint256 self) internal pure returns (uint256) {

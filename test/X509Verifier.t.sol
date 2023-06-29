@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.13;
+pragma solidity >=0.8.0 <0.9.0;
 
-import "forge-std/Test.sol";
-
-import "test/utils/helper.sol";
-import "src/ASN1Decode.sol";
-import "src/X509.sol";
-
-import "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
-import "ens-contracts/dnssec-oracle/BytesUtils.sol";
+import { Test, console } from "forge-std/Test.sol";
+import { X509GenHelper } from "test/utils/helper.sol";
+import { Asn1Decode } from "rave/ASN1Decode.sol";
+import { X509Verifier } from "rave/X509Verifier.sol";
+import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 
 contract TestIntelCert is Test {
     function testIntelCertChainFromSignedX509ExtractedBody() public {
@@ -102,13 +99,13 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
         console.logBytes(MODULUS);
     }
 
-    function testSelfSignedCertIsValid() public {
+    function testSelfSignedCertIsValid() public view {
         // Verify the pre-extracted cert body was signed with MODULUS
         assert(X509Verifier.verifyChildCert(CERT_BODY_BYTES, CERT_SIG, MODULUS, EXPONENT));
     }
 
     function testCertModulusExtracted() public {
-        (bytes memory modulus, bytes memory exponent) = X509Verifier.verifySignedX509(CERT_BYTES, MODULUS, EXPONENT);
+        (bytes memory modulus,) = X509Verifier.verifySignedX509(CERT_BYTES, MODULUS, EXPONENT);
 
         // Correct the lengths since parsing may prepend an empty "0x00"
         uint256 lenGot = modulus.length;
@@ -124,21 +121,21 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
 }
 
 contract Test512BitCertChain is TestCertChainVerification {
-    constructor() X509GenHelper("512") {}
+    constructor() X509GenHelper("512") { }
 }
 
 contract Test1024BitCertChain is TestCertChainVerification {
-    constructor() X509GenHelper("1024") {}
+    constructor() X509GenHelper("1024") { }
 }
 
 contract Test2048BitCertChain is TestCertChainVerification {
-    constructor() X509GenHelper("2048") {}
+    constructor() X509GenHelper("2048") { }
 }
 
 contract Test3072BitCertChain is TestCertChainVerification {
-    constructor() X509GenHelper("3072") {}
+    constructor() X509GenHelper("3072") { }
 }
 
 contract Test4096BitCertChain is TestCertChainVerification {
-    constructor() X509GenHelper("4096") {}
+    constructor() X509GenHelper("4096") { }
 }

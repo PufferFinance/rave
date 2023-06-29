@@ -9,27 +9,27 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
 import eth_abi
 
-mrenclave_offset = 112
-mrsigner_offset = 176
-payload_offset = 368
-quote_body_length = 432
+MRENCLAVE_OFFSET = 112
+MRSIGNER_OFFSET = 176
+PAYLOAD_OFFSET = 368
+QUOTE_BODY_LENGTH = 432
 
 def build_quote_body(mre, mrs, payload) -> bytes:
     assert len(mre) == 32
     assert len(mrs) == 32
     assert len(payload) <= 64
-    body_bytes = bytes(mrenclave_offset) + mre
-    body_bytes += bytes(mrsigner_offset - len(body_bytes)) + mrs
-    body_bytes += bytes(payload_offset - len(body_bytes)) + payload
+    body_bytes = bytes(MRENCLAVE_OFFSET) + mre
+    body_bytes += bytes(MRSIGNER_OFFSET - len(body_bytes)) + mrs
+    body_bytes += bytes(PAYLOAD_OFFSET - len(body_bytes)) + payload
     body_bytes += bytes(64 - len(payload)) # pad extra bytes with 0s
-    assert len(body_bytes) == quote_body_length 
+    assert len(body_bytes) == QUOTE_BODY_LENGTH 
     return body_bytes
 
 def mock_evidence(mrenclave, mrsigner, payload):
     quote_body = build_quote_body(mrenclave, mrsigner, payload)
-    assert mrenclave == bytes(quote_body[mrenclave_offset:mrenclave_offset+32])
-    assert mrsigner == bytes(quote_body[mrsigner_offset:mrsigner_offset+32])
-    assert payload == bytes(quote_body[payload_offset:payload_offset+len(payload)])
+    assert mrenclave == bytes(quote_body[MRENCLAVE_OFFSET:MRENCLAVE_OFFSET+32])
+    assert mrsigner == bytes(quote_body[MRSIGNER_OFFSET:MRSIGNER_OFFSET+32])
+    assert payload == bytes(quote_body[PAYLOAD_OFFSET:PAYLOAD_OFFSET+len(payload)])
 
     enc_quote_body = base64.b64encode(quote_body).decode('utf-8')
 
@@ -45,11 +45,11 @@ def mock_evidence(mrenclave, mrsigner, payload):
     }
     return evidence, quote_body
 
-def prepare_values(e: dict, dec_quote_body: bytes, encode_quote: bool) -> bytes:
+def prepare_values(e: dict, dec_quote_body: bytes) -> bytes:
         vs = []
         for k, v in e.items():
             # insert base64 decoded quote
-            if k == 'isvEnclaveQuoteBody' and not encode_quote:
+            if k == 'isvEnclaveQuoteBody':
                 vs.append(dec_quote_body)
             else:
                 if type(v) != str:
@@ -72,19 +72,16 @@ def sign(fname, message) -> bytes:
 
 
 def main():
-    # Pad inputs
+    # Prepare inputs
     stripped_mre = sys.argv[1].lstrip('0x')
     stripped_mrs = sys.argv[2].lstrip('0x')
     stripped_payload = sys.argv[3].lstrip('0x')
-
     mrenclave = '0' * (64 - len(stripped_mre)) + stripped_mre
     mrsigner = '0' * (64 - len(stripped_mrs)) + stripped_mrs
     payload = '0' * (128 - len(stripped_payload)) + stripped_payload
     mrenclave = bytes.fromhex(mrenclave)
     mrsigner = bytes.fromhex(mrsigner)
     payload = bytes.fromhex(payload)
-    encode_json = sys.argv[5] == 'True'
-    encode_quote = sys.argv[6] == 'True'
 
     # mock json report
     evidence, dec_quote_body = mock_evidence(mrenclave, mrsigner, payload)
@@ -92,19 +89,15 @@ def main():
     # json -> bytes to sign (ignoring whitespace)
     evidence_bytes = json.dumps(evidence).replace(" ", "").encode('utf-8')
 
-    # sign json bytes
+    # sign json bytes (send as base64 decoded)
     fname = sys.argv[4]
     signature = sign(fname, evidence_bytes)
 
-    if encode_json:
-        # Send the JSON-encoded report byes
-        ffi_payload = eth_abi.encode(['bytes', 'bytes'], [signature, evidence_bytes])
-    else:
-        # convert JSON values to abi-encoded bytes to send to contract 
-        values_payload = prepare_values(evidence, dec_quote_body, encode_quote)
+    # convert JSON values to abi-encoded bytes to send to contract 
+    values_payload = prepare_values(evidence, dec_quote_body)
 
-        # Send only the report's JSON values 
-        ffi_payload = eth_abi.encode(['bytes', 'bytes'], [signature, values_payload])
+    # Send only the report's JSON values 
+    ffi_payload = eth_abi.encode(['bytes', 'bytes'], [signature, values_payload])
 
     # save payload for debug
     with open('/tmp/evidence.json', 'w') as f:

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.13;
+pragma solidity >=0.8.0 <0.9.0;
 
-import "forge-std/Test.sol";
+import { Test, console } from "forge-std/Test.sol";
 
 library BytesHelper {
     function notAllZeroes(bytes memory data) public pure returns (bool) {

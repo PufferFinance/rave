@@ -2,7 +2,9 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import { Test, console } from "forge-std/Test.sol";
-import { RAVE, RAVEWithBase64Decode, RAVEWithJSONDecodeAndBase64Decode } from "rave/RAVE.sol";
+import { RAVE } from "rave/RAVE.sol";
+import { RAVEWithJSONDecodeAndBase64Decode } from "rave/RAVEWithJSONDecodeAndBase64Decode.sol";
+import { RAVEWithBase64Decode } from "rave/RAVEWithBase64Decode.sol";
 import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 import {
     MockEvidence,

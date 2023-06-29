@@ -1,20 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity >=0.8.0 <0.9.0;
 
+import { Base64Decoder } from "rave/Base64Decode.sol";
+import { RAVEBase } from "rave/RAVEBase.sol";
+import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 import { X509Verifier } from "rave/X509Verifier.sol";
 import { JSONBuilder } from "rave/JSONBuilder.sol";
-import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
-import { Base64 } from "openzeppelin/utils/Base64.sol";
-import { RAVEBase } from "rave/RAVEBase.sol";
-import { Test, console } from "forge-std/Test.sol";
 
 /**
- * @title RAVE
+ * @title RAVEWithBase64Decode
  * @author Puffer finance
  * @custom:security-contact security@puffer.fi
- * @notice RAVe is a smart contract for verifying Remote Attestation evidence.
+ * @notice RAVEWithBase64Decode is a smart contract for verifying Remote Attestation evidence.
  */
-contract RAVE is RAVEBase, JSONBuilder, Test {
+contract RAVEWithBase64Decode is RAVEBase, Base64Decoder, JSONBuilder {
     using BytesUtils for *;
 
     constructor() { }
@@ -30,14 +29,8 @@ contract RAVE is RAVEBase, JSONBuilder, Test {
         bytes32 mrenclave,
         bytes32 mrsigner
     ) public view override returns (bytes memory payload) {
-        // Decode the encoded report JSON values to a Values struct and reconstruct the original JSON string
-        (Values memory reportValues, bytes memory reportBytes) = _buildReportBytes(report);
-
-        console.log("out");
-        console.logBytes(reportValues.isvEnclaveQuoteBody);
-
-        console.log("report bytes");
-        console.logBytes(reportBytes);
+        // Decode the encoded _report JSON values to a Values struct and reconstruct the original JSON string
+        (Values memory reportValues, bytes memory reportBytes) = buildReportBytes(report);
 
         // Verify the report was signed by the SigningPK
         if (!verifyReportSignature(reportBytes, sig, signingMod, signingExp)) {
@@ -54,9 +47,9 @@ contract RAVE is RAVEBase, JSONBuilder, Test {
     function rave(
         bytes calldata report,
         bytes calldata sig,
-        bytes memory leafX509Cert,
-        bytes memory signingMod,
-        bytes memory signingExp,
+        bytes calldata leafX509Cert,
+        bytes calldata signingMod,
+        bytes calldata signingExp,
         bytes32 mrenclave,
         bytes32 mrsigner
     ) public view override returns (bytes memory payload) {
@@ -68,43 +61,6 @@ contract RAVE is RAVEBase, JSONBuilder, Test {
         payload = verifyRemoteAttestation(report, sig, leafCertModulus, leafCertExponent, mrenclave, mrsigner);
     }
 
-    function _buildReportBytes(bytes memory encodedReportValues)
-        internal
-        view
-        returns (Values memory reportValues, bytes memory reportBytes)
-    {
-        // Decode the report JSON values
-        (
-            bytes memory id,
-            bytes memory timestamp,
-            bytes memory version,
-            bytes memory epidPseudonym,
-            bytes memory advisoryURL,
-            bytes memory advisoryIDs,
-            bytes memory isvEnclaveQuoteStatus,
-            bytes memory isvEnclaveQuoteBody
-        ) = abi.decode(encodedReportValues, (bytes, bytes, bytes, bytes, bytes, bytes, bytes, bytes));
-
-        console.log("dec body");
-        console.logBytes(isvEnclaveQuoteBody);
-
-        // Assumes the quote body was already decoded off-chain
-        bytes memory encBody = bytes(Base64.encode(isvEnclaveQuoteBody));
-        console.log("enc body");
-        console.logBytes(encBody);
-
-        // Pack values
-        reportValues = JSONBuilder.Values(
-            id, timestamp, version, epidPseudonym, advisoryURL, advisoryIDs, isvEnclaveQuoteStatus, encBody
-        );
-
-        // Reconstruct the JSON report that was signed
-        reportBytes = bytes(buildJSON(reportValues));
-
-        // Pass on the decoded value for later processing
-        reportValues.isvEnclaveQuoteBody = isvEnclaveQuoteBody;
-    }
-
     /*
     * @dev Parses a report, verifies the fields are correctly set, and extracts the enclave' 64 byte commitment.
     * @param reportValues The values from the attestation evidence report JSON from IAS.
@@ -114,15 +70,15 @@ contract RAVE is RAVEBase, JSONBuilder, Test {
     */
     function _verifyReportContents(Values memory reportValues, bytes32 mrenclave, bytes32 mrsigner)
         internal
-        pure
+        view
         returns (bytes memory payload)
     {
         // check enclave status
         bytes32 status = keccak256(reportValues.isvEnclaveQuoteStatus);
         require(status == OK_STATUS || status == HARDENING_STATUS, "bad isvEnclaveQuoteStatus");
 
-        // quote body is already base64 decoded
-        bytes memory quoteBody = reportValues.isvEnclaveQuoteBody;
+        // base64 decode quote body
+        bytes memory quoteBody = bytes(decode(string(reportValues.isvEnclaveQuoteBody)));
         assert(quoteBody.length == QUOTE_BODY_LENGTH);
 
         // Verify report's MRENCLAVE matches the expected
@@ -135,5 +91,29 @@ contract RAVE is RAVEBase, JSONBuilder, Test {
 
         // Verify report's <= 64B payload matches the expected
         payload = quoteBody.substring(PAYLOAD_OFFSET, PAYLOAD_SIZE);
+    }
+
+    function buildReportBytes(bytes memory encodedReportValues)
+        internal
+        pure
+        returns (Values memory reportValues, bytes memory reportBytes)
+    {
+        // Decode the report JSON values
+        (
+            bytes memory v0,
+            bytes memory v1,
+            bytes memory v2,
+            bytes memory v3,
+            bytes memory v4,
+            bytes memory v5,
+            bytes memory v6,
+            bytes memory v7
+        ) = abi.decode(encodedReportValues, (bytes, bytes, bytes, bytes, bytes, bytes, bytes, bytes));
+
+        // Pack values
+        reportValues = JSONBuilder.Values(v0, v1, v2, v3, v4, v5, v6, v7);
+
+        // Reconstruct the JSON report that was signed
+        reportBytes = bytes(buildJSON(reportValues));
     }
 }

@@ -49,12 +49,14 @@ jobs:
           forge test --ffi --match-contract TestBase64 -vvvv
           forge test --ffi --match-contract TestJSONBuilder -vvvv
           forge test --ffi --match-contract TestRSA -vvvv
+          forge test --ffi --match-contract CacheTheX509s -vvvv
           forge test --ffi --match-contract TestIntelCert -vvvv
           forge test --ffi --match-contract Test512BitCertChain -vvvv
           forge test --ffi --match-contract Test1024BitCertChain -vvvv
           forge test --ffi --match-contract Test2048BitCertChain -vvvv
           forge test --ffi --match-contract Test3072BitCertChain -vvvv
           forge test --ffi --match-contract Test4096BitCertChain -vvvv
+          forge test --ffi --match-contract TestHappyRave -vvvv
           forge test --ffi --match-contract RaveInstanceTest -vvvv
           forge test --ffi --match-contract RaveSanityTester -vvvv
           forge test --ffi --match-contract RaveFuzzTester -vvvv

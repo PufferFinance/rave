@@ -1,9 +1,6 @@
 # scripts
 This directory contains the bash and Python scripts used during testing, invoked via `vm.ffi()`.
 
-### runBase64Encode.py
-> Returns the base64 encoding of the valid utf-8 input string.
-
 ### runRSAKeygen.sh
 > Generates a new PEM-encoded RSA private key `/tmp/private.pem` and public key `/tmp/public.pem`. 
 

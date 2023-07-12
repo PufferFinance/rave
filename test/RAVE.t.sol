@@ -41,6 +41,11 @@ abstract contract RAVETester is Test {
         assert(keccak256(gotPayload.substring(0, expPayload.length)) == keccak256(expPayload));
     }
 
+    function test_verify_ok() public view {
+
+
+    }
+
     function test_VerifyRave() public view {
         bytes memory report = m.report();
         bytes memory sig = m.sig();

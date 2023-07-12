@@ -74,18 +74,6 @@ def gen_epid_pseudo():
 def gen_quote_body():
     return """AgABAIAMAAANAA0AAAAAAEJhbJjVPJcSY5RHybDnAD8AAAAAAAAAAAAAAAAAAAAAFBQLB/+ADgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQAAAAAAAAAfAAAAAAAAANCud0d0wgZKYN2SVB/MfLizrN6g15PzsnonpE2/cedfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACD1xnnferKFHD2uvYqTXdDA8iZ22kCD5xw7h38CMfOngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACk8eLeQq3kKFam57ApQyJ412rRw+hs7M1vL0ZTKGHCDAYVo7T4o+KD0jwJJV5RNg4AAAAAAAAAAAAAAAAAAAAA"""
 
-def abi_dict_to_bytes(e: dict) -> bytes:
-        vs = []
-        for k, v in e.items():
-            if type(v) != str:
-                # handle lists and integers
-                vs.append(json.dumps(v).replace(" ", "").encode('utf-8'))
-            else:
-                vs.append(v.encode('utf-8'))
-
-        values_payload = eth_abi.encode(['bytes'] * len(vs), vs)
-        return values_payload
-
 class ISAVerifyReport():
     def __init__(self):
         self.id = gen_rand_id()
@@ -175,13 +163,7 @@ class ISAVerifyReport():
         return f'{report} {sig} {pub_key} {priv_key}'
 
     def ffi(self):
-        return [
-            #abi_dict_to_bytes(self.toJson()),
-            to_b(self.toJson()),
-            to_b(self.sign()),
-            to_b(to_hex(self.pub_pem)),
-            to_b(to_hex(self.priv_pem))
-        ]
+        return [to_b(x) for x in str(self).split(' ')]
 
     def to_dict(self):
         return json.loads(self.toJson())

@@ -10,6 +10,8 @@ import binascii
 import argparse
 import os
 import random
+import eth_abi
+import json
 
 def get_timezome():
     now = datetime.datetime.now()
@@ -72,6 +74,18 @@ def gen_epid_pseudo():
 def gen_quote_body():
     return """AgABAIAMAAANAA0AAAAAAEJhbJjVPJcSY5RHybDnAD8AAAAAAAAAAAAAAAAAAAAAFBQLB/+ADgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQAAAAAAAAAfAAAAAAAAANCud0d0wgZKYN2SVB/MfLizrN6g15PzsnonpE2/cedfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACD1xnnferKFHD2uvYqTXdDA8iZ22kCD5xw7h38CMfOngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACk8eLeQq3kKFam57ApQyJ412rRw+hs7M1vL0ZTKGHCDAYVo7T4o+KD0jwJJV5RNg4AAAAAAAAAAAAAAAAAAAAA"""
 
+def abi_dict_to_bytes(e: dict) -> bytes:
+        vs = []
+        for k, v in e.items():
+            if type(v) != str:
+                # handle lists and integers
+                vs.append(json.dumps(v).replace(" ", "").encode('utf-8'))
+            else:
+                vs.append(v.encode('utf-8'))
+
+        values_payload = eth_abi.encode(['bytes'] * len(vs), vs)
+        return values_payload
+
 class ISAVerifyReport():
     def __init__(self):
         self.id = gen_rand_id()
@@ -94,7 +108,7 @@ class ISAVerifyReport():
 
     def use_rsa_test_keys(self):
         def load_hex(file_name):
-            path = os.path.join("..", "mocks", file_name)
+            path = os.path.join("test", "mocks", file_name)
             with open(path, 'r') as f:
                 return f.read()
 
@@ -158,10 +172,23 @@ class ISAVerifyReport():
             assert(' ' not in v)
 
         # Return a signed verification report.
-        return f'{report}   {sig}   {pub_key}   {priv_key}'
+        return f'{report} {sig} {pub_key} {priv_key}'
+
+    def ffi(self):
+        return [
+            #abi_dict_to_bytes(self.toJson()),
+            to_b(self.toJson()),
+            to_b(self.sign()),
+            to_b(to_hex(self.pub_pem)),
+            to_b(to_hex(self.priv_pem))
+        ]
+
+    def to_dict(self):
+        return json.loads(self.toJson())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument('-abi_out', '--abi_out')
     parser.add_argument('-id', '--id')
     parser.add_argument('-timestamp', '--timestamp')
     parser.add_argument('-version', '--version')
@@ -175,6 +202,7 @@ if __name__ == "__main__":
     parser.add_argument('-use_test_key', '--use_test_key')
     args = vars(parser.parse_args(sys.argv[1:]))
 
+    abi_out = False
     do_gen_rsa_keys = True
     report = ISAVerifyReport()
     for opt in args:
@@ -188,6 +216,10 @@ if __name__ == "__main__":
         try:
             compile(arg, '<stdin>', 'eval')
         except SyntaxError:
+            continue
+
+        if opt in ("abi_out"):
+            abi_out = True
             continue
 
         if opt in ("pem_priv"):
@@ -211,5 +243,14 @@ if __name__ == "__main__":
     if do_gen_rsa_keys:
         report.set_rsa_keys()
 
-    # sig report
-    print(report)
+    # Generate output for foundary.
+    if abi_out:
+        ffi_payload = eth_abi.encode(
+            ['bytes'] * 4, 
+            report.ffi()
+        )
+    
+        print(ffi_payload.hex())
+    else:
+        # sig report
+        print(report)

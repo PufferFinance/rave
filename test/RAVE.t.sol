@@ -41,11 +41,6 @@ abstract contract RAVETester is Test {
         assert(keccak256(gotPayload.substring(0, expPayload.length)) == keccak256(expPayload));
     }
 
-    function test_verify_ok() public view {
-
-
-    }
-
     function test_VerifyRave() public view {
         bytes memory report = m.report();
         bytes memory sig = m.sig();
@@ -79,6 +74,37 @@ abstract contract RAVETester is Test {
 
         // Verify it matches the expected payload
         assert(keccak256(gotPayload.substring(0, expPayload.length)) == keccak256(expPayload));
+    }
+}
+
+contract TestJSON is Test {
+    using BytesUtils for *;
+    function test_verify_ok() public {
+        // Indicate an OK response from ISA.
+        string[] memory cmds = new string[](8);
+        cmds[0] = "python3";
+        cmds[1] = "test/scripts/isa_verify_report.py";
+        cmds[2] = "-quote_status";
+        cmds[3] = "OK";
+        cmds[4] = "-use_test_key";
+        cmds[5] = "1";
+        cmds[6] = "-abi_out";
+        cmds[7] = "1";
+    
+
+        // Get signed JSON verification report.
+        bytes memory resp = vm.ffi(cmds);
+
+        // Unpack command output into byte pointers.
+        (
+            bytes memory report_json,
+            bytes memory sig,
+            bytes memory pub_hex,
+            bytes memory priv_hex
+        ) = abi.decode(resp, (bytes, bytes, bytes, bytes));
+
+        console.logBytes(report_json);
+        console.logBytes(priv_hex);
     }
 }
 

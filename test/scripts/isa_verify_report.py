@@ -2,16 +2,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
-import time
-import datetime
-import sys
-import getopt
-import binascii
-import argparse
-import os
-import random
-import eth_abi
-import json
+import time, datetime, sys, getopt, binascii, argparse
+import os, random, eth_abi, json, base64, re
 
 def get_timezome():
     now = datetime.datetime.now()
@@ -38,6 +30,7 @@ def gen_rsa_keys():
 
 to_b = lambda x: x if type(x) == bytes else x.encode("ascii")
 to_s = lambda x: x if type(x) == str else x.decode("utf-8")
+list_to_b = lambda l: [to_b(x) for x in l]
 
 def from_hex(x):
     return to_s(binascii.unhexlify(to_b(x)))
@@ -74,6 +67,54 @@ def gen_epid_pseudo():
 def gen_quote_body():
     return """AgABAIAMAAANAA0AAAAAAEJhbJjVPJcSY5RHybDnAD8AAAAAAAAAAAAAAAAAAAAAFBQLB/+ADgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQAAAAAAAAAfAAAAAAAAANCud0d0wgZKYN2SVB/MfLizrN6g15PzsnonpE2/cedfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACD1xnnferKFHD2uvYqTXdDA8iZ22kCD5xw7h38CMfOngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACk8eLeQq3kKFam57ApQyJ412rRw+hs7M1vL0ZTKGHCDAYVo7T4o+KD0jwJJV5RNg4AAAAAAAAAAAAAAAAAAAAA"""
 
+def verify_json(s):
+    d = json.loads(s)
+    req_fields = [
+        'id',
+        'timestamp',
+        'version',
+        'epidPseudonym',
+        'isvEnclaveQuoteStatus',
+        'isvEnclaveQuoteBody'
+    ]
+
+    # Check required fields are present.
+    for field in req_fields:
+        assert(field in d)
+        d[field] = str(d[field])
+
+    # ID is numeric.
+    assert(re.match('^[0-9]+$', d['id']))
+
+    # Timestamp matches date + time format.
+    p = '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]+$'
+    assert(re.match(p, d['timestamp']))
+
+    # Version is numeric.
+    assert(re.match('^[0-9]+$', d['version']))
+
+    # EPID is b64.
+    b64_p = '^[0-9a-zA-Z\/=+]+$'
+    assert(re.match(b64_p, d['epidPseudonym']))
+
+    # Advisory URL is correct.
+    if 'advisoryURL' in d:
+        assert(d['advisoryURL'] == 'https://security-center.intel.com')
+        assert('advisoryIDs' in d)
+
+    # Advisory IDs in Intel's format.
+    if 'advisoryIDs' in d:
+        p = '\[(,?"INTEL[-]SA[-][0-9]{5}")+\]'
+        assert(re.match(p, d['advisoryIDs']))
+        assert('advisoryURL' in d)
+
+    # Quote status is correct.
+    assert(d['isvEnclaveQuoteStatus'] in ('OK', 'SW_HARDENING_NEEDED'))
+
+    # Quote body is b64.
+    assert(re.match(b64_p, d['isvEnclaveQuoteBody']))
+
+
 class ISAVerifyReport():
     def __init__(self):
         self.id = gen_rand_id()
@@ -105,15 +146,27 @@ class ISAVerifyReport():
         self.pub_pem = from_hex(load_hex('test_rsa_pub.pem.hex'))
         self.pub_key = load_rsa_pub(self.pub_pem)
 
+    def get_timestamp(self):
+        tz = get_timezome()
+        dt = datetime.datetime.fromtimestamp(self.timestamp, tz)
+        return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")
+
+    def get_advisory_ids(self):
+        advisory_ids = [f'"{x}"' for x in self.advisory_ids]
+        advisory_ids = ",".join(advisory_ids)
+        return f'[{advisory_ids}]'
+
+    def get_quote_body(self):
+        qb = base64.b64decode(self.quote_body)
+        return to_b(qb)
+
     def toJson(self):
         # Random report ID.
         out  = f'"id":"{self.id}",'
 
         # Build timestamp portion from unix timestamp.
-        tz = get_timezome()
-        dt = datetime.datetime.fromtimestamp(self.timestamp, tz)
-        dt_str = dt.strftime("%Y-%m-%dT%H:%M:%S.%f")
-        out += f'"timestamp":"{dt_str}",'
+        timestamp = self.get_timestamp()
+        out += f'"timestamp":"{timestamp}",'
 
         # Meta data for the report.
         out += f'"version":{self.version},'
@@ -124,9 +177,8 @@ class ISAVerifyReport():
             out += f'"advisoryURL":"{self.advisory_url}",'
 
             # Generate advisory id string.
-            advisory_ids = [f'"{x}"' for x in self.advisory_ids]
-            advisory_str = ",".join(advisory_ids)
-            out += f'"advisoryIDs":[{advisory_str}],'
+            advisory_str = self.get_advisory_ids()
+            out += f'"advisoryIDs":{advisory_str},'
 
         # Last fields about the quote.
         out += f'"isvEnclaveQuoteStatus":"{self.quote_status}",'
@@ -162,15 +214,48 @@ class ISAVerifyReport():
         # Return a signed verification report.
         return f'{report} {sig} {pub_key} {priv_key}'
 
-    def ffi(self):
-        return [to_b(x) for x in str(self).split(' ')]
-
     def to_dict(self):
         return json.loads(self.toJson())
 
+    def out_program_args(self):
+        return list_to_b(str(self).split(' '))
+
+    def out_report_list(self):
+        return eth_abi.encode(
+            ['bytes'] * 8, 
+            list_to_b(
+                [
+                    f'{self.id}',
+                    f'{self.get_timestamp()}',
+                    f'{self.version}',
+                    f'{self.epid_pseudo}',
+                    f'{self.advisory_url}',
+                    f'{self.get_advisory_ids()}',
+                    f'{self.quote_status}',
+                    self.get_quote_body()
+                ]
+            )
+        )
+
+    def out_values_struct(self):
+        return eth_abi.encode(
+            ['(' + (',bytes' * 8)[1:] + ')'],
+            [(
+                to_b(f'{self.id}'),
+                to_b(f'{self.get_timestamp()}'),
+                to_b(f'{self.version}'),
+                to_b(f'{self.epid_pseudo}'),
+                to_b(f'{self.advisory_url}'),
+                to_b(f'{self.get_advisory_ids()}'),
+                to_b(f'{self.quote_status}'),
+                to_b(gen_quote_body()),
+            )]
+        )
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-abi_out', '--abi_out')
+    parser.add_argument('-out', '--out')
     parser.add_argument('-id', '--id')
     parser.add_argument('-timestamp', '--timestamp')
     parser.add_argument('-version', '--version')
@@ -182,26 +267,27 @@ if __name__ == "__main__":
     parser.add_argument('-pem_priv', '--pem_priv')
     parser.add_argument('-pem_pub', '--pem_pub')
     parser.add_argument('-use_test_key', '--use_test_key')
+    parser.add_argument('-verify_json', '--verify_json')
     args = vars(parser.parse_args(sys.argv[1:]))
 
-    abi_out = False
+    out = ''
     do_gen_rsa_keys = True
     report = ISAVerifyReport()
+    ffi_payload = None
+    json_in = None
     for opt in args:
         # Not set.
         arg = args[opt]
         if arg is None:
             continue
 
-        # Exec is used later on.
-        # Only accept values that don't contain Python.
-        try:
-            compile(arg, '<stdin>', 'eval')
-        except SyntaxError:
+        if opt in ("out"):
+            out = arg
             continue
 
-        if opt in ("abi_out"):
-            abi_out = True
+        if opt in ("verify_json"):
+            out = "verify_json"
+            json_in = arg
             continue
 
         if opt in ("pem_priv"):
@@ -226,13 +312,24 @@ if __name__ == "__main__":
         report.set_rsa_keys()
 
     # Generate output for foundary.
-    if abi_out:
+    if out == 'program_args':
         ffi_payload = eth_abi.encode(
             ['bytes'] * 4, 
-            report.ffi()
+            report.out_program_args()
         )
-    
-        print(ffi_payload.hex())
+        
+    elif out == 'report_list':
+        print(report.out_report_list())
+
+    elif out == 'values_struct':
+        ffi_payload = report.out_values_struct()
+
+    elif out == "verify_json":
+        verify_json(from_hex(json_in))
+        print("success")
+
     else:
-        # sig report
         print(report)
+
+    if ffi_payload is not None:
+        print(ffi_payload.hex())

@@ -11,7 +11,9 @@ contract JSONBuilder is RAVEConsts {
         bytes epidPseudonym;
         bytes advisoryURL;
         bytes advisoryIDs;
-        bytes isvEnclaveQuoteStatus;
+        bytes isvEnclaveQuoteStatus;    
+
+        // needs to be base64.
         bytes isvEnclaveQuoteBody;
     }
 
@@ -49,13 +51,15 @@ contract JSONBuilder is RAVEConsts {
         json = string(
             abi.encodePacked(
                 json,
-                ',"isvEnclaveQuoteStatus":"',
+                '","isvEnclaveQuoteStatus":"',
                 values.isvEnclaveQuoteStatus,
                 '","isvEnclaveQuoteBody":"',
                 values.isvEnclaveQuoteBody,
                 '"}'
             )
         );
+
+    
     }
 }
 

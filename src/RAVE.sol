@@ -63,6 +63,9 @@ contract RAVE is RAVEBase, JSONBuilder {
 
     /*
     * @dev Builds the JSON report string from the abi-encoded `encodedReportValues`. The assumption is that `isvEnclaveQuoteBody` value was previously base64 decoded off-chain and needs to be base64 encoded to produce the message-to-be-signed.
+
+    Ref: https://www.intel.com/content/dam/develop/public/us/en/documents/sgx-attestation-api-spec.pdf p24
+
     * @param encodedReportValues The values from the attestation evidence report JSON from IAS.
     * @return reportValues The JSON values as a Values struct for easier processing downstream
     * @return reportBytes The exact message-to-be-signed
@@ -74,13 +77,36 @@ contract RAVE is RAVEBase, JSONBuilder {
     {
         // Decode the report JSON values
         (
+            // string of numbers = 123213124
             bytes memory id,
+
+            // string of data:time = 2023-02-15T01:24:57.989456
             bytes memory timestamp,
+
+            // string of numbers = 4
             bytes memory version,
+
+            /*
+                (opt) b64 EPID B (64 bytes) & EPID K (64 bytes)
+                components of EPID signature. 
+            */
             bytes memory epidPseudonym,
+
+            // (opt) string with advisory url
             bytes memory advisoryURL,
+
+            // (opt) string with a python-like list = ['test']
             bytes memory advisoryIDs,
+
+            // string for the status = OK
             bytes memory isvEnclaveQuoteStatus,
+
+            /*
+                raw bytes of the quote body
+                normally this field in the verification report is
+                base64 encoded but having to decode this on-chain =
+                horrible waste of gas.
+            */
             bytes memory isvEnclaveQuoteBody
         ) = abi.decode(encodedReportValues, (bytes, bytes, bytes, bytes, bytes, bytes, bytes, bytes));
 

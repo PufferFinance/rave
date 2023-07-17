@@ -4,6 +4,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 import { Test, console } from "forge-std/Test.sol";
 import { CustomJSONBuilder, JSONBuilder } from "rave/JSONBuilder.sol";
+import { Base64 } from "openzeppelin/utils/Base64.sol";
 
 contract TestJSONBuilder is Test, JSONBuilder {
     using BytesUtils for *;
@@ -78,7 +79,6 @@ contract TestJSONBuilder is Test, JSONBuilder {
         cmds[6] = "-out";
         cmds[7] = "values_struct";
     
-
         // Get signed JSON verification report.
         bytes memory out = vm.ffi(cmds);
 
@@ -90,20 +90,36 @@ contract TestJSONBuilder is Test, JSONBuilder {
 
 
         string memory json = buildJSON(values);
+        string memory b64_json = Base64.encode(bytes(json));
 
         // Check its a valid verify report.
         string[] memory cmds2 = new string[](4);
-        cmds[0] = "python3";
-        cmds[1] = "test/scripts/isa_verify_report.py";
-        cmds[2] = "-verify_json";
-        cmds[3] = json;
+        cmds2[0] = "python3";
+        cmds2[1] = "test/scripts/isa_verify_report.py";
+        cmds2[2] = "-verify_json";
+        cmds2[3] = b64_json;
         bytes memory out2 = vm.ffi(cmds2);
-
-        console.logBytes(out2);
-
+        assert(keccak256(bytes("success")) == keccak256(out2));
 
         // Check the optional fields aren't included.
-        console.log(json);
+        string[] memory cmds3 = new string[](6);
+        cmds3[0] = "python3";
+        cmds3[1] = "test/scripts/re_ffi.py";
+        cmds3[2] = "-p";
+        cmds3[3] = Base64.encode(bytes("(advisoryURL)|(advisoryIDs)"));
+        cmds3[4] = "-s";
+        cmds3[5] = b64_json;
+        bytes memory out3 = vm.ffi(cmds3);
+
+        // Unpack command output into byte pointers.
+        bytes memory re_out = abi.decode(
+            out3, 
+            (bytes)
+        );
+
+        // Matches are sent back as a list of bytes.
+        // Hence zero len means no optional fields.
+        assert(bytes(re_out).length == 0); // new lines.
     }
 }
 

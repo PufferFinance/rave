@@ -1,9 +1,11 @@
+from utils import *
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
 import time, datetime, sys, getopt, binascii, argparse
 import os, random, eth_abi, json, base64, re
+
 
 def get_timezome():
     now = datetime.datetime.now()
@@ -27,16 +29,6 @@ def gen_rsa_keys():
     )
 
     return priv_key, priv_pem, pub_key, pub_pem
-
-to_b = lambda x: x if type(x) == bytes else x.encode("ascii")
-to_s = lambda x: x if type(x) == str else x.decode("utf-8")
-list_to_b = lambda l: [to_b(x) for x in l]
-
-def from_hex(x):
-    return to_s(binascii.unhexlify(to_b(x)))
-
-def to_hex(x):
-    return to_s(binascii.hexlify(to_b(x)))
 
 def load_rsa_priv(pem):
     return serialization.load_pem_private_key(
@@ -252,7 +244,6 @@ class ISAVerifyReport():
             )]
         )
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-out', '--out')
@@ -325,11 +316,12 @@ if __name__ == "__main__":
         ffi_payload = report.out_values_struct()
 
     elif out == "verify_json":
-        verify_json(from_hex(json_in))
+        json_in = to_s(base64.b64decode(to_b(json_in)))
+        verify_json(json_in)
         print("success")
 
     else:
         print(report)
 
     if ffi_payload is not None:
-        print(ffi_payload.hex())
+        print(ffi_payload.hex(),)

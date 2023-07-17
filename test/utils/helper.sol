@@ -3,6 +3,17 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import { Test, console } from "forge-std/Test.sol";
 
+library Utils {
+    function str_to_hex(string memory s) public pure returns (bytes memory) {
+        string memory out;
+
+        string memory charset = "0123456789ABCDEF";
+        for(uint128 i = 0; i < bytes(s).length; i++) {
+        }
+
+    }
+}
+
 library BytesHelper {
     function notAllZeroes(bytes memory data) public pure returns (bool) {
         for (uint256 i = 0; i < data.length; i++) {
@@ -149,3 +160,4 @@ contract X509GenHelper is Test {
         (CERT_BYTES, CERT_BODY_BYTES, MODULUS, CERT_SIG) = abi.decode(response, (bytes, bytes, bytes, bytes));
     }
 }
+

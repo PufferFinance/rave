@@ -4,10 +4,99 @@ pragma solidity >=0.8.0 <0.9.0;
 import { Asn1Decode, NodePtr } from "rave/ASN1Decode.sol";
 import { RSAVerify } from "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
 import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
+import { SafeMath } from "openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
+import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import { Utils } from "rave/Utils.sol";
 
 library X509Verifier {
     using Asn1Decode for bytes;
     using BytesUtils for bytes;
+    using Utils for bytes;
+
+    bytes constant _SHA256_PAD_ID = hex"3031300d060960864801650304020105000420";
+    function rsaPad(bytes memory mod, bytes32 digest) public pure returns (bytes memory) {
+        // RSA pub key 'size' / bit length.
+        uint256 modBits = SafeMath.mul(mod.length, 8);
+        uint256 emBits = SafeMath.sub(modBits, 1);
+        uint256 emLen = Math.ceilDiv(emBits, 8);
+
+        // Is message long enough?
+        uint256 tLen = SafeMath.add(_SHA256_PAD_ID.length, digest.length);
+        if(emLen < SafeMath.add(tLen, 11)) {
+            revert();
+        }
+
+        //        (1)       (2)      (3)   (4)         (5)
+        // out = 00 01 (FF * ps_len) 00 SHA256ID... MSG_DIGEST
+        uint256 psLen = SafeMath.sub(SafeMath.sub(emLen, tLen), 3);
+        uint256 outLen = SafeMath.add(SafeMath.add(3, psLen), tLen);
+        bytes memory out = new bytes(outLen);
+
+        // (1): Leading 00 FF bytes.
+        out[0] = hex"00";
+        out[1] = hex"01";
+
+        // (2): Add FF section to padding.
+        uint256 i = 0;
+        uint256 p = 2;
+        for(; i < psLen; i++) {
+            out[p + i] = hex"ff";
+        }
+
+        // (3): Followed by 00.
+        p = p + i; i = 0;
+        out[p] = hex"00";
+
+        // (4): Digest algorithm ID.
+        p = p + 1; i = 0;
+        for(; i < _SHA256_PAD_ID.length; i++) {
+            out[p + i] = _SHA256_PAD_ID[i];
+        }
+
+        // (5): Digest of the message to be padded.
+        p = p + i; i = 0;
+        for(; i < digest.length; i++) {
+            out[p + i] = digest[i];
+        }
+
+        return out;
+    }
+
+    function verifySomething(
+        bytes memory message,
+        bytes memory sig,
+        bytes memory mod,
+        bytes memory exp
+    ) public view returns (bool) {
+        // Invalid sig len.
+        if(sig.length != mod.length) {
+            return false;
+        }
+
+        // Invalid msg length.
+        // ((2 ** 64) - 1)
+        if(message.length > 18446744073709551615) {
+            return false;
+        }
+
+        // Recover the digest using RSA public key params.
+        (bool success, bytes memory res) = RSAVerify.rsarecover(
+            mod,
+            exp,
+            sig
+        );
+
+        // Message gets encoded according to rfc8017#section-9.2.
+        // That becomes the value input to sha256.
+        bytes32 digest = sha256(message);
+        bytes memory encodedMsg = rsaPad(mod, digest);
+
+        // Digest is last 32 bytes of res.
+        bytes32 recovered = res.readBytes32(res.length - 32);
+
+        // Compare recovered digest to encoded input digest.
+        return success && (recovered == sha256(encodedMsg));
+    }
 
     /*
      * @dev Verifies an x509 certificate was signed (RSASHA256) by the supplied public key. 

@@ -88,7 +88,6 @@ contract TestJSONBuilder is Test, JSONBuilder {
             (Values)
         );
 
-
         string memory json = buildJSON(values);
         string memory b64_json = Base64.encode(bytes(json));
 

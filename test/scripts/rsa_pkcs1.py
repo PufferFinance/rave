@@ -13,7 +13,7 @@ from Crypto.Util import number
 from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
 
 
-def get_rsa_pkcs1_padding(msg, pem_priv):
+def get_rsa_pkcs1_padding(msg, pem_priv, include_null=True):
     # Load RSA key params from PEM private key.
     key = RSA.import_key(pem_priv)
 
@@ -29,8 +29,10 @@ def get_rsa_pkcs1_padding(msg, pem_priv):
     # Convert from bits to bytes.
     k = ceil_div(modBits, 8)
 
-    # Return the padded message WITH an algorithm ID.
-    em = _EMSA_PKCS1_V1_5_ENCODE(h, k, True)
+    # Return the padded message with null params for der(HID, h).
+    # DerObject.__init__(self, 0x05, b'', None, False)
+    # b'\x05\x00'
+    em = _EMSA_PKCS1_V1_5_ENCODE(h, k, include_null)
 
     # NOTE: Very important: may need to test both of these in our script.
     # WITH and WITHOUT the algorithm id!
@@ -41,6 +43,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-msg', '--msg')
     parser.add_argument('-pem_priv', '--pem_priv')
+    parser.add_argument('-inc_null', '--inc_null')
     args = vars(parser.parse_args(sys.argv[1:]))
 
     # Details to pad.
@@ -51,6 +54,7 @@ if __name__ == "__main__":
         pem_priv = from_hex(f.read())
 
     # Process any command-line args.
+    inc_null = True
     for opt in args:
         # Not set.
         arg = args[opt]
@@ -63,8 +67,11 @@ if __name__ == "__main__":
         if opt in ("pem_priv"):
             pem_priv = base64.b64decode(to_b(arg))
 
+        if opt in ("inc_null"):
+            inc_null = True if arg == "True" else False
+        
     # Get padded msg.
-    em = get_rsa_pkcs1_padding(msg, pem_priv)
+    em = get_rsa_pkcs1_padding(msg, pem_priv, inc_null)
     ffi_payload = eth_abi.encode(
         ['bytes'], 
         [em]

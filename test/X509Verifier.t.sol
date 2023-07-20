@@ -126,31 +126,21 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
     }
 
     function testPKCS1Padding() public {
-        /*
-            key = CERT_PRIV_PEM        
-            msg = CERT_BYTES
-            MODULUS
-            EXPONENT
-            CERT_SIG
-
-                    bytes memory message,
-            bytes memory sig,
-            bytes memory mod,
-            bytes memory exp
-
-        */
-
+        // Calculate padded message.
+        bool incNULL = true;
         bytes32 digest = sha256(CERT_BYTES);
-        bytes memory em = X509Verifier.rsaPad(MODULUS, digest);
+        bytes memory em = X509Verifier.rsaPad(MODULUS, digest, incNULL);
 
         // Get DER-encoded self-signed x509 as hex string
-        string[] memory cmds = new string[](6);
+        string[] memory cmds = new string[](8);
         cmds[0] = "python";
         cmds[1] = "test/scripts/rsa_pkcs1.py";
         cmds[2] = "-msg";
         cmds[3] = Base64.encode(CERT_BYTES);
         cmds[4] = "-pem_priv";
         cmds[5] = Base64.encode(CERT_PRIV_PEM);
+        cmds[6] = "-inc_null";
+        cmds[7] = "True";
         bytes memory out = vm.ffi(cmds);
 
         // Expected padded msg.

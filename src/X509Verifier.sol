@@ -13,15 +13,26 @@ library X509Verifier {
     using BytesUtils for bytes;
     using Utils for bytes;
 
-    bytes constant _SHA256_PAD_ID = hex"3031300d060960864801650304020105000420";
-    function rsaPad(bytes memory mod, bytes32 digest) public pure returns (bytes memory) {
+    bytes constant _SHA256_PAD_ID_WITH_NULL = hex"3031300d060960864801650304020105000420";
+    bytes constant _SHA256_PAD_ID_WITHOUT_NULL = hex"302f300b06096086480165030402010420";
+
+    // withNULL seems true by default.
+    function rsaPad(bytes memory mod, bytes32 digest, bool withNULL) public pure returns (bytes memory) {
         // RSA pub key 'size' / bit length.
         uint256 modBits = SafeMath.mul(mod.length, 8);
         uint256 emBits = SafeMath.sub(modBits, 1);
         uint256 emLen = Math.ceilDiv(emBits, 8);
 
+        // Select digest OID portion based on bool flag.
+        bytes memory digestOID;
+        if(withNULL) {
+            digestOID = _SHA256_PAD_ID_WITH_NULL;
+        } else {
+            digestOID = _SHA256_PAD_ID_WITHOUT_NULL;
+        }
+
         // Is message long enough?
-        uint256 tLen = SafeMath.add(_SHA256_PAD_ID.length, digest.length);
+        uint256 tLen = SafeMath.add(digestOID.length, digest.length);
         if(emLen < SafeMath.add(tLen, 11)) {
             revert();
         }
@@ -37,26 +48,22 @@ library X509Verifier {
         out[1] = hex"01";
 
         // (2): Add FF section to padding.
-        uint256 i = 0;
-        uint256 p = 2;
-        for(; i < psLen; i++) {
-            out[p + i] = hex"ff";
+        uint256 p = 2; uint256 i = 0;
+        for(i = 0; i < psLen; i++) {
+            out[p++] = hex"ff";
         }
 
         // (3): Followed by 00.
-        p = p + i; i = 0;
-        out[p] = hex"00";
+        out[p++] = hex"00";
 
         // (4): Digest algorithm ID.
-        p = p + 1; i = 0;
-        for(; i < _SHA256_PAD_ID.length; i++) {
-            out[p + i] = _SHA256_PAD_ID[i];
+        for(i = 0; i < digestOID.length; i++) {
+            out[p++] = digestOID[i];
         }
 
         // (5): Digest of the message to be padded.
-        p = p + i; i = 0;
-        for(; i < digest.length; i++) {
-            out[p + i] = digest[i];
+        for(i = 0; i < digest.length; i++) {
+            out[p++] = digest[i];
         }
 
         return out;
@@ -89,7 +96,7 @@ library X509Verifier {
         // Message gets encoded according to rfc8017#section-9.2.
         // That becomes the value input to sha256.
         bytes32 digest = sha256(message);
-        bytes memory encodedMsg = rsaPad(mod, digest);
+        bytes memory encodedMsg = rsaPad(mod, digest, true);
 
         // Digest is last 32 bytes of res.
         bytes32 recovered = res.readBytes32(res.length - 32);

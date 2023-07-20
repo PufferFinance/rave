@@ -6,6 +6,7 @@ import { X509GenHelper } from "test/utils/helper.sol";
 import { Asn1Decode } from "rave/ASN1Decode.sol";
 import { X509Verifier } from "rave/X509Verifier.sol";
 import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
+import { Base64 } from "openzeppelin/utils/Base64.sol";
 
 contract TestIntelCert is Test {
     function testIntelCertChainFromSignedX509ExtractedBody() public {
@@ -97,6 +98,11 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
         readX509Modulus();
         console.log("Modulus:");
         console.logBytes(MODULUS);
+
+        // Read the private key pem.
+        readX509PrivPEM();
+        console.log("priv pem:");
+        console.logBytes(CERT_PRIV_PEM);
     }
 
     function testSelfSignedCertIsValid() public view {
@@ -117,6 +123,43 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
         }
 
         assertEq(keccak256(modulus), keccak256(MODULUS));
+    }
+
+    function testPKCS1Padding() public {
+        /*
+            key = CERT_PRIV_PEM        
+            msg = CERT_BYTES
+            MODULUS
+            EXPONENT
+            CERT_SIG
+
+                    bytes memory message,
+            bytes memory sig,
+            bytes memory mod,
+            bytes memory exp
+
+        */
+
+        bytes32 digest = sha256(CERT_BYTES);
+        bytes memory em = X509Verifier.rsaPad(MODULUS, digest);
+
+        // Get DER-encoded self-signed x509 as hex string
+        string[] memory cmds = new string[](6);
+        cmds[0] = "python";
+        cmds[1] = "test/scripts/rsa_pkcs1.py";
+        cmds[2] = "-msg";
+        cmds[3] = Base64.encode(CERT_BYTES);
+        cmds[4] = "-pem_priv";
+        cmds[5] = Base64.encode(CERT_PRIV_PEM);
+        bytes memory out = vm.ffi(cmds);
+
+        // Expected padded msg.
+        bytes memory expected = abi.decode(
+            out, 
+            (bytes)
+        );
+
+        assertEq(keccak256(em), keccak256(expected));
     }
 }
 

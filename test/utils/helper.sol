@@ -55,6 +55,7 @@ contract X509GenHelper is Test {
     bytes public CERT_BYTES;
     bytes public CERT_BODY_BYTES;
     bytes public CERT_SIG;
+    bytes public CERT_PRIV_PEM;
     bytes public MODULUS;
     bytes public EXPONENT = hex"010001";
 
@@ -77,6 +78,15 @@ contract X509GenHelper is Test {
         cmds[3] = X509_NAME;
         cmds[4] = X509_PRIV_KEY_NAME;
         vm.ffi(cmds);
+    }
+
+    function readX509PrivPEM() public {
+        // Get DER-encoded self-signed x509 as hex string
+        string[] memory cmds = new string[](3);
+        cmds[0] = "bash";
+        cmds[1] = "test/scripts/runX509GetPrivPEM.sh";
+        cmds[2] = X509_PRIV_KEY_NAME;
+        CERT_PRIV_PEM = vm.ffi(cmds);
     }
 
     function readX509Cert() public {

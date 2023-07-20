@@ -69,6 +69,18 @@ library X509Verifier {
         return out;
     }
 
+    /*
+        Attestation report signing CA specifies “sha256RSA”
+        for the sig algorithm:
+            e.g. msg(PKCS #1 sha256) with RSA encryption
+
+        It seems that the null param is meant to be included
+        -- verify that.
+
+        TODO: Add code to use this to check the report sig
+        from the x509Verifer test code -- use the
+            CERT_SIG .. CERT ... for convenience.
+    */
     function verifySomething(
         bytes memory message,
         bytes memory sig,

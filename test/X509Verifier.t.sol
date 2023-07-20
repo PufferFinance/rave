@@ -125,9 +125,8 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
         assertEq(keccak256(modulus), keccak256(MODULUS));
     }
 
-    function testPKCS1Padding() public {
+    function _helperPKCS1Padding(bool incNULL) private {
         // Calculate padded message.
-        bool incNULL = true;
         bytes32 digest = sha256(CERT_BYTES);
         bytes memory em = X509Verifier.rsaPad(MODULUS, digest, incNULL);
 
@@ -140,7 +139,13 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
         cmds[4] = "-pem_priv";
         cmds[5] = Base64.encode(CERT_PRIV_PEM);
         cmds[6] = "-inc_null";
-        cmds[7] = "True";
+        if(incNULL) {
+            cmds[7] = "True";
+        }
+        if(!incNULL) {
+            cmds[7] = "False";
+        }
+
         bytes memory out = vm.ffi(cmds);
 
         // Expected padded msg.
@@ -150,6 +155,11 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
         );
 
         assertEq(keccak256(em), keccak256(expected));
+    }
+
+    function testPKCS1Padding() public {
+        _helperPKCS1Padding(true);
+        _helperPKCS1Padding(false);
     }
 }
 

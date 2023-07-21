@@ -161,6 +161,17 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
         _helperPKCS1Padding(true);
         _helperPKCS1Padding(false);
     }
+
+    function testVerifyRSA() public {
+        bool is_valid = X509Verifier.verifyRSA(
+            CERT_BODY_BYTES,
+            CERT_SIG,
+            MODULUS,
+            EXPONENT
+        );
+
+        assertTrue(is_valid);
+    }
 }
 
 contract Test512BitCertChain is TestCertChainVerification {

@@ -76,45 +76,46 @@ library X509Verifier {
 
         It seems that the null param is meant to be included
         -- verify that.
-
-        TODO: Add code to use this to check the report sig
-        from the x509Verifer test code -- use the
-            CERT_SIG .. CERT ... for convenience.
     */
-    function verifySomething(
+    function verifyRSA(
         bytes memory message,
         bytes memory sig,
         bytes memory mod,
         bytes memory exp
     ) public view returns (bool) {
-        // Invalid sig len.
+        // The signature len must match the modulus length.
         if(sig.length != mod.length) {
             return false;
         }
 
         // Invalid msg length.
-        // ((2 ** 64) - 1)
+        // ((2 ** 64) - 1).
+        // There's a practical limit to the msg size for sha256.
         if(message.length > 18446744073709551615) {
             return false;
         }
 
-        // Recover the digest using RSA public key params.
+        // Recover the PKCS#1 encoded message from the signature.
+        // Message gets encoded according to rfc8017#section-9.2.
+        // That becomes the value input to sha256.
         (bool success, bytes memory res) = RSAVerify.rsarecover(
             mod,
             exp,
             sig
         );
 
-        // Message gets encoded according to rfc8017#section-9.2.
-        // That becomes the value input to sha256.
+        /*
+        The message to encrypt is padded such that the length
+        matches the modulus. To 'compress' the message sha256 is
+        used yielding a 32 byte digest. The digest is then
+        prefixed according to the PKCS#1 padding scheme.
+        Encryption of the result becomes the full signature.
+        */
         bytes32 digest = sha256(message);
         bytes memory encodedMsg = rsaPad(mod, digest, true);
 
-        // Digest is last 32 bytes of res.
-        bytes32 recovered = res.readBytes32(res.length - 32);
-
         // Compare recovered digest to encoded input digest.
-        return success && (recovered == sha256(encodedMsg));
+        return success && (keccak256(res) == keccak256(encodedMsg));
     }
 
     /*
@@ -131,11 +132,7 @@ library X509Verifier {
         bytes memory parentMod,
         bytes memory parentExp
     ) public view returns (bool) {
-        // Recover the digest using parent's public key
-        (bool success, bytes memory res) = RSAVerify.rsarecover(parentMod, parentExp, certSig);
-        // Digest is last 32 bytes of res
-        bytes32 recovered = res.readBytes32(res.length - 32);
-        return success && recovered == sha256(childCertBody);
+        return verifyRSA(childCertBody, certSig, parentMod, parentExp);
     }
 
     /*

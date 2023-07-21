@@ -70,12 +70,13 @@ library X509Verifier {
     }
 
     /*
-        Attestation report signing CA specifies “sha256RSA”
-        for the sig algorithm:
-            e.g. msg(PKCS #1 sha256) with RSA encryption
-
-        It seems that the null param is meant to be included
-        -- verify that.
+        Verifies an RSA 'signature' (encryption over a message)
+        matches what is specified in PKCS#1. Note: that the
+        format of this encoding allows for the digest algorithm
+        to include an optional 'NULL parameter.' It is assumed
+        this is included and hence we don't test for a valid
+        sig for a message where this parameter isn't include.
+        But regular implementations of RSA verification do this.
     */
     function verifyRSA(
         bytes memory message,
@@ -116,23 +117,6 @@ library X509Verifier {
 
         // Compare recovered digest to encoded input digest.
         return success && (keccak256(res) == keccak256(encodedMsg));
-    }
-
-    /*
-     * @dev Verifies an x509 certificate was signed (RSASHA256) by the supplied public key. 
-     * @param childCertBody The DER-encoded body (preimage) of the x509   child certificate
-     * @param certSig The RSASHA256 signature of the childCertBody
-     * @param parentMod The modulus of the parent certificate's public RSA key
-     * @param parentExp The exponent of the parent certificate's public RSA key
-     * @return Returns true if this childCertBody was signed by the parent's RSA private key
-     */
-    function verifyChildCert(
-        bytes memory childCertBody,
-        bytes memory certSig,
-        bytes memory parentMod,
-        bytes memory parentExp
-    ) public view returns (bool) {
-        return verifyRSA(childCertBody, certSig, parentMod, parentExp);
     }
 
     /*
@@ -188,7 +172,7 @@ library X509Verifier {
         bytes memory signature = cert.bytesAt(sigPtr);
 
         // Verify the parent signed the certBody
-        require(verifyChildCert(certBody, signature, parentMod, parentExp), "verifyChildCert fail");
+        require(verifyRSA(certBody, signature, parentMod, parentExp), "verifyChildCert fail");
 
         //  ----------------
         // Begin traversing the tbsCertificate

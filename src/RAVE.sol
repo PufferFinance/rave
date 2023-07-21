@@ -22,7 +22,8 @@ contract RAVE is RAVEBase, JSONBuilder {
      * @inheritdoc RAVEBase
      */
     function verifyRemoteAttestation(
-        bytes calldata report,
+        // ABI encoded list of report fields as bytes.
+        bytes calldata reportFieldsABI,
         bytes calldata sig,
         bytes memory signingMod,
         bytes memory signingExp,
@@ -30,10 +31,10 @@ contract RAVE is RAVEBase, JSONBuilder {
         bytes32 mrsigner
     ) public view override returns (bytes memory payload) {
         // Decode the encoded report JSON values to a Values struct and reconstruct the original JSON string
-        (Values memory reportValues, bytes memory reportBytes) = _buildReportBytes(report);
+        (Values memory reportValues, bytes memory reportBytes) = _buildReportBytes(reportFieldsABI);
 
         // Verify the report was signed by the SigningPK
-        if (!verifyReportSignature(reportBytes, sig, signingMod, signingExp)) {
+        if (!X509Verifier.verifyRSA(reportBytes, sig, signingMod, signingExp)) {
             revert BadReportSignature();
         }
 

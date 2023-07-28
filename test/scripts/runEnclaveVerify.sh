@@ -32,6 +32,12 @@ RAVE_INPUTS=$(python3 preprocess_rave_inputs.py $REPORT $SIGNATURE $X509)
 
 echo $x509
 
+# report = json
+# sig = b64 rsa sig of report above
+# x409 = two --begin cert-- ... --end cert--
+# need signing mod and signing exp.
+# which is the leaf x509 cert intel root ca, leaf cert
+
 exit
 #####################
 # occlum print mrsigner > MRSIGNER

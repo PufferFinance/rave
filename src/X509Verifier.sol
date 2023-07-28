@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity >=0.8.0 <0.9.0;
 
-import { Asn1Decode, NodePtr } from "rave/ASN1Decode.sol";
-import { RSAVerify } from "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
-import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
-import { SafeMath } from "openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
-import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
-import { Utils } from "rave/Utils.sol";
+import { Asn1Decode, NodePtr } from "./ASN1Decode.sol";
+import { RSAVerify } from "./../lib/ens-contracts/contracts/dnssec-oracle/algorithms/RSAVerify.sol";
+import { BytesUtils } from "./../lib/ens-contracts/contracts/dnssec-oracle/BytesUtils.sol";
+import { SafeMath } from "./../lib/openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
+import { Math } from "./../lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
+import { Utils } from "./Utils.sol";
 
 library X509Verifier {
     using Asn1Decode for bytes;

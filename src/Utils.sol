@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity >=0.8.0 <0.9.0;
+
 library Utils {
     function concatBytes(bytes memory a, bytes memory b) public pure returns (bytes memory) {
         uint256 i = 0; uint256 p = 0;

@@ -33,12 +33,27 @@ report=$(echo $keygen_response | jq -r '.evidence.raw_report')
 x509=$(echo $keygen_response | jq -r '.evidence.signing_cert')
 x509_hex=$(eval "echo '$x509' | $hexlify")
 
+
 intel_root_cert=$(python3 preprocess_rave_inputs.py --certs $x509_hex -get_root 1)
 leaf_cert=$(python3 preprocess_rave_inputs.py --certs $x509_hex -get_leaf 1)
 sig_mod=$(eval "echo -e $leaf_cert > /tmp/evsm"; ./runX509ModulusExtraction.sh '/tmp/evsm')
-echo $sig_mod
+sig_exp="010001"
 
-# bytes memory expectedLeafExponent = hex"010001";
+report_hex=$(eval "echo '$report' | $hexlify")
+sig_hex=$(eval "echo '$sig' | $hexlify")
+abi_out=$(
+    python3 preprocess_rave_inputs.py \
+    --abi_encode 1 \
+    --certs $x509_hex \
+    --report $report_hex \
+    --sig $sig_hex \
+    --sig_mod $sig_mod \
+    --sig_exp $sig_exp \
+    --mrenclave $mrenclave \
+    --mrsigner $mrsigner 
+)
+
+echo $abi_out
 
 # Sig mod has 0x preceeding
 

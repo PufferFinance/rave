@@ -2,19 +2,22 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import { Asn1Decode, NodePtr } from "./ASN1Decode.sol";
-import { RSAVerify } from "./../lib/ens-contracts/contracts/dnssec-oracle/algorithms/RSAVerify.sol";
-import { BytesUtils } from "./../lib/ens-contracts/contracts/dnssec-oracle/BytesUtils.sol";
-import { SafeMath } from "./../lib/openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
-import { Math } from "./../lib/openzeppelin-contracts/contracts/utils/math/Math.sol";
+import { RSAVerify } from "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
+import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
+import { SafeMath } from "openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
+import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import { Utils } from "./Utils.sol";
 
-library X509Verifier {
+contract X509Verifier {
     using Asn1Decode for bytes;
     using BytesUtils for bytes;
     using Utils for bytes;
 
+
     bytes constant _SHA256_PAD_ID_WITH_NULL = hex"3031300d060960864801650304020105000420";
     bytes constant _SHA256_PAD_ID_WITHOUT_NULL = hex"302f300b06096086480165030402010420";
+
+    constructor() { }
 
     // withNULL seems true by default.
     function rsaPad(bytes memory mod, bytes32 digest, bool withNULL) public pure returns (bytes memory) {

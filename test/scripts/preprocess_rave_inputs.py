@@ -60,13 +60,13 @@ if args["abi_encode"] is not None:
     leaf_cert_hex = to_hex(leaf_cert)
     ffi_payload = eth_abi.encode(
         [
-            "bytes",
-            "bytes",
-            "bytes",
-            "bytes",
-            "bytes",
-            "bytes32",
-            "bytes32",
+            "bytes", # Report
+            "bytes", # Sig
+            "bytes", # Leaf cert
+            "bytes", # Sig modulus
+            "bytes", # Sig exponent
+            "bytes32", # Mrenclave digest
+            "bytes32", # Mrsigner digest
         ],
 
         # Convert hex strings to bytes.

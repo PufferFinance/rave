@@ -3,8 +3,8 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import { X509Verifier } from "./X509Verifier.sol";
 import { JSONBuilder } from "./JSONBuilder.sol";
-import { BytesUtils } from "./../lib/ens-contracts/contracts/dnssec-oracle/BytesUtils.sol";
-import { Base64 } from "./../lib/openzeppelin-contracts/contracts/utils/Base64.sol";
+import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
+import { Base64 } from "openzeppelin-contracts/contracts/utils/Base64.sol";
 import { RAVEBase } from "./RAVEBase.sol";
 
 /**
@@ -13,7 +13,7 @@ import { RAVEBase } from "./RAVEBase.sol";
  * @custom:security-contact security@puffer.fi
  * @notice RAVe is a smart contract for verifying Remote Attestation evidence.
  */
-contract RAVE is RAVEBase, JSONBuilder {
+contract RAVE is RAVEBase, JSONBuilder, X509Verifier {
     using BytesUtils for *;
 
     constructor() { }
@@ -34,7 +34,7 @@ contract RAVE is RAVEBase, JSONBuilder {
         (Values memory reportValues, bytes memory reportBytes) = _buildReportBytes(reportFieldsABI);
 
         // Verify the report was signed by the SigningPK
-        if (!X509Verifier.verifyRSA(reportBytes, sig, signingMod, signingExp)) {
+        if (!verifyRSA(reportBytes, sig, signingMod, signingExp)) {
             revert BadReportSignature();
         }
 
@@ -56,7 +56,7 @@ contract RAVE is RAVEBase, JSONBuilder {
     ) public view override returns (bytes memory payload) {
         // Verify the leafX509Cert was signed with signingMod and signingExp
         (bytes memory leafCertModulus, bytes memory leafCertExponent) =
-            X509Verifier.verifySignedX509(leafX509Cert, signingMod, signingExp);
+            verifySignedX509(leafX509Cert, signingMod, signingExp);
 
         // Verify report has expected fields then extract its payload
         payload = verifyRemoteAttestation(report, sig, leafCertModulus, leafCertExponent, mrenclave, mrsigner);

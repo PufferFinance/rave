@@ -5,10 +5,14 @@ import { Test, console } from "forge-std/Test.sol";
 import { X509GenHelper } from "test/utils/helper.sol";
 import { Asn1Decode } from "rave/ASN1Decode.sol";
 import { X509Verifier } from "rave/X509Verifier.sol";
+import { RAVE } from "rave/RAVE.sol";
 import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 import { Base64 } from "openzeppelin/utils/Base64.sol";
 
 contract TestIntelCert is Test {
+
+    X509Verifier Certs;
+
     function testIntelCertChainFromSignedX509ExtractedBody() public {
         // DER encoded bytes of the Intel Leaf Signing x509 Certificate (excluding the header and signature)
         bytes memory certBytes =
@@ -31,7 +35,7 @@ contract TestIntelCert is Test {
         bytes32 expectedHash = hex"13472863bcbe2462fb4312ddda9d77ca41575d79760881eb1d2d6c9be2c40094";
         assertEq(expectedHash, _msgHash);
 
-        require(X509Verifier.verifyChildCert(certBytes, certSig, intelRootModulus, intelRootExponent));
+        require(Certs.verifyRSA(certBytes, certSig, intelRootModulus, intelRootExponent));
     }
 
     function testIntelCertChainFromSignedX509() public {
@@ -57,7 +61,7 @@ contract TestIntelCert is Test {
         bytes memory expectedLeafExponent = hex"010001";
 
         (bytes memory modulus, bytes memory exponent) =
-            X509Verifier.verifySignedX509(certBytes, intelRootModulus, intelRootExponent);
+            Certs.verifySignedX509(certBytes, intelRootModulus, intelRootExponent);
 
         // Correct the lengths since parsing may prepend an empty "0x00"
         uint256 lenGot = modulus.length;
@@ -74,6 +78,8 @@ contract TestIntelCert is Test {
 
 abstract contract TestCertChainVerification is Test, X509GenHelper {
     using BytesUtils for *;
+
+    X509Verifier Certs;
 
     function setUp() public {
         // Generate new self-signed x509 cert
@@ -107,11 +113,11 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
 
     function testSelfSignedCertIsValid() public view {
         // Verify the pre-extracted cert body was signed with MODULUS
-        assert(X509Verifier.verifyChildCert(CERT_BODY_BYTES, CERT_SIG, MODULUS, EXPONENT));
+        assert(Certs.verifyRSA(CERT_BODY_BYTES, CERT_SIG, MODULUS, EXPONENT));
     }
 
     function testCertModulusExtracted() public {
-        (bytes memory modulus,) = X509Verifier.verifySignedX509(CERT_BYTES, MODULUS, EXPONENT);
+        (bytes memory modulus,) = Certs.verifySignedX509(CERT_BYTES, MODULUS, EXPONENT);
 
         // Correct the lengths since parsing may prepend an empty "0x00"
         uint256 lenGot = modulus.length;
@@ -128,7 +134,7 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
     function _helperPKCS1Padding(bool incNULL) private {
         // Calculate padded message.
         bytes32 digest = sha256(CERT_BYTES);
-        bytes memory em = X509Verifier.rsaPad(MODULUS, digest, incNULL);
+        bytes memory em = Certs.rsaPad(MODULUS, digest, incNULL);
 
         // Get DER-encoded self-signed x509 as hex string
         string[] memory cmds = new string[](8);
@@ -163,7 +169,7 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
     }
 
     function testVerifyRSA() public {
-        bool is_valid = X509Verifier.verifyRSA(
+        bool is_valid = Certs.verifyRSA(
             CERT_BODY_BYTES,
             CERT_SIG,
             MODULUS,

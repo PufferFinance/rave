@@ -16,6 +16,23 @@ matthew@matthew-secure-signer-dev:~/projects/rave-foundry$ forge create --rpc-ur
 
 """
 
-p = "(?:[-]{2,}BEGIN[ ]+CERTIFICATE[-]{2,}([^-]+)[-]{2,}END[ ]+CERTIFICATE[-]{2,})+"
+cert_p = "([-]{2,}BEGIN[ ]+CERTIFICATE[-]{2,}(?:[^-]+)[-]{2,}END[ ]+CERTIFICATE[-]{2,})+"
 
-args = sys.argv
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-certs', '--certs')
+parser.add_argument('-get_root', '--get_root')
+parser.add_argument('-get_leaf', '--get_leaf')
+args = vars(parser.parse_args(sys.argv[1:]))
+
+# Unpack certs.
+certs = from_hex(args["certs"])
+certs = re.findall(cert_p, certs)
+intel_root_cert, leaf_cert = certs
+
+
+if args["get_root"] is not None:
+    print(repr(intel_root_cert))
+
+if args["get_leaf"] is not None:
+    print(repr(leaf_cert))

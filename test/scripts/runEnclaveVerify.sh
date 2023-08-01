@@ -23,7 +23,7 @@ mrsigner=$(occlum print mrsigner)
 popd > /dev/null
 
 # Make BLS keypair.
-$client_path --bls-keygen --mrenclave "$mrenclave"
+$client_path --bls-keygen --mrenclave "$mrenclave" > /dev/null
 keygen_response=$(cat $ss_out_path/keygen_response)
 
 # sdfsdf

@@ -1,4 +1,4 @@
-import base64, binascii
+import base64, binascii, sha3
 
 to_b = lambda x: x if type(x) == bytes else x.encode("ascii")
 to_s = lambda x: x if type(x) == str else x.decode("utf-8")
@@ -16,5 +16,10 @@ def from_hex(x):
 
 def to_hex(x):
     return to_s(binascii.hexlify(to_b(x)))
+
+def sha3_hex(x):
+    k = sha3.keccak_256()
+    k.update(x)
+    return k.hexdigest()
 
 rm_hex = lambda x: [x.update({k: from_hex(x[k])}) for k,_ in x.items() if x[k]]

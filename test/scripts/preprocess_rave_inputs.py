@@ -86,7 +86,11 @@ if args["abi_encode"] is not None:
         )
     )
 
+    # Add function name to out.
+    out = sha3_hex(b"rave(bytes,bytes,bytes,bytes,bytes,bytes32,bytes32)")[:8]
+    out = to_s(out) + ffi_payload.hex()
+
     # Then dump everything as hex.
-    print(ffi_payload.hex(),)
+    print(out,)
 
     

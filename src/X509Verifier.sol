@@ -19,6 +19,27 @@ contract X509Verifier {
 
     constructor() { }
 
+    /*
+     * @dev Verifies an x509 certificate was signed (RSASHA256) by the supplied public key. 
+     * @param childCertBody The DER-encoded body (preimage) of the x509   child certificate
+     * @param certSig The RSASHA256 signature of the childCertBody
+     * @param parentMod The modulus of the parent certificate's public RSA key
+     * @param parentExp The exponent of the parent certificate's public RSA key
+     * @return Returns true if this childCertBody was signed by the parent's RSA private key
+     */
+    function verifyChildCert(
+        bytes memory childCertBody,
+        bytes memory certSig,
+        bytes memory parentMod,
+        bytes memory parentExp
+    ) public view returns (bool) {
+        // Recover the digest using parent's public key
+        (bool success, bytes memory res) = RSAVerify.rsarecover(parentMod, parentExp, certSig);
+        // Digest is last 32 bytes of res
+        bytes32 recovered = res.readBytes32(res.length - 32);
+        return success && recovered == sha256(childCertBody);
+    }
+
     // withNULL seems true by default.
     function rsaPad(bytes memory mod, bytes32 digest, bool withNULL) public pure returns (bytes memory) {
         // RSA pub key 'size' / bit length.
@@ -175,7 +196,8 @@ contract X509Verifier {
         bytes memory signature = cert.bytesAt(sigPtr);
 
         // Verify the parent signed the certBody
-        require(verifyRSA(certBody, signature, parentMod, parentExp), "verifyChildCert fail");
+        require(verifyChildCert(certBody, signature, parentMod, parentExp), "verifyChildCert fail");
+        //require(verifyRSA(certBody, signature, parentMod, parentExp), "verifyChildCert fail");
 
         //  ----------------
         // Begin traversing the tbsCertificate

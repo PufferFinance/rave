@@ -1,0 +1,2 @@
+Probably use fixed key bit size to make testing easier.
+    Current padding algorithm tests break (they assume a certain bit size I think)

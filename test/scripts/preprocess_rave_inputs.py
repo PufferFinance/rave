@@ -16,6 +16,12 @@ matthew@matthew-secure-signer-dev:~/projects/rave-foundry$ forge create --rpc-ur
 
 """
 
+def cert_wrap(x):
+    x = x.strip()
+    return f"""-----BEGIN CERTIFICATE-----
+{x}
+-----END CERTIFICATE-----"""
+
 # Process command line arguments.
 parser = argparse.ArgumentParser()
 
@@ -39,18 +45,18 @@ parser.add_argument('-mrsigner', '--mrsigner')
 args = vars(parser.parse_args(sys.argv[1:]))
 
 # Unpack certs.
-cert_p = "([-]{2,}BEGIN[ ]+CERTIFICATE[-]{2,}(?:[^-]+)[-]{2,}END[ ]+CERTIFICATE[-]{2,})+"
+cert_p = "([-]{2,}BEGIN[ ]+CERTIFICATE[-]{2,}(?:[\s\S]+?)[-]{2,}END[ ]+CERTIFICATE[-]{2,})+"
 certs = from_hex(args["certs"])
 certs = re.findall(cert_p, certs)
 intel_root_cert, leaf_cert = certs
 
 # Intel root certificate output.
 if args["get_root"] is not None:
-    print(repr(intel_root_cert))
+    print(repr(intel_root_cert)[1:-1])
 
 # Leaf certificate output.
 if args["get_leaf"] is not None:
-    print(repr(leaf_cert))
+    print(repr(leaf_cert)[1:-1])
 
 if args["abi_encode"] is not None:
     # Trucate 0x prefix from args.
@@ -58,6 +64,26 @@ if args["abi_encode"] is not None:
 
     # Build ABI encoded argument output.
     leaf_cert_hex = to_hex(leaf_cert)
+
+    # 
+    unhex_list = [
+        args["report"],
+        args["sig"],
+        leaf_cert_hex,
+        args["sig_mod"],
+        args["sig_exp"],
+        args["mrenclave"],
+        args["mrsigner"]
+    ]
+
+    # Convert hex strings to bytes.
+    bytes_list = list_to_b([
+        binascii.unhexlify(to_b(x)) for x in 
+        unhex_list
+    ])
+
+    #bytes_list[0] = bytes_list[0].strip()
+    bytes_list[1] = bytes_list[1].strip()
     ffi_payload = eth_abi.encode(
         [
             "bytes", # Report
@@ -68,22 +94,7 @@ if args["abi_encode"] is not None:
             "bytes32", # Mrenclave digest
             "bytes32", # Mrsigner digest
         ],
-
-        # Convert hex strings to bytes.
-        list_to_b(
-            [
-                binascii.unhexlify(to_b(x)) for x in 
-                [
-                    args["report"],
-                    args["sig"],
-                    leaf_cert_hex,
-                    args["sig_mod"],
-                    args["sig_exp"],
-                    args["mrenclave"],
-                    args["mrsigner"]
-                ]
-            ]
-        )
+        bytes_list
     )
 
     # Add function name to out.

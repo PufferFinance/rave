@@ -7,7 +7,7 @@ signer_root=/home/matthew/projects/secure-signer
 
 # Utilities.
 hexlify="python3 -c \"import binascii as b; import sys; "
-hexlify+="print(b.hexlify(sys.stdin.read().encode('ascii')).decode('utf-8'))\""
+hexlify+="print(b.hexlify(sys.stdin.read().encode('ascii')).decode('utf-8'),)\""
 
 # Key variables used by the script.
 ss_out_path=$signer_root/ss_out
@@ -31,13 +31,30 @@ pub=$(echo $keygen_response | jq -r '.pk_hex')
 sig=$(echo $keygen_response | jq -r '.evidence.signed_report')
 report=$(echo $keygen_response | jq -r '.evidence.raw_report')
 x509=$(echo $keygen_response | jq -r '.evidence.signing_cert')
-x509_hex=$(eval "echo '$x509' | $hexlify")
+x509_hex=$(eval "echo -e '$x509' | $hexlify")
 
 
 intel_root_cert=$(python3 preprocess_rave_inputs.py --certs $x509_hex -get_root 1)
 leaf_cert=$(python3 preprocess_rave_inputs.py --certs $x509_hex -get_leaf 1)
-sig_mod=$(eval "echo -e $leaf_cert > /tmp/evsm"; ./runX509ModulusExtraction.sh '/tmp/evsm')
+sig_mod=$(eval "echo -e '$leaf_cert' > /tmp/evsm"; ./runX509ModulusExtraction.sh '/tmp/evsm')
 sig_exp="010001"
+
+
+echo -e $leaf_cert > /tmp/rleaf.pem
+echo -e $sig > /tmp/rsig.sign
+echo $report > /tmp/rreport.txt
+
+
+#openssl x509 -in /tmp/rleaf.pem -text -noout -certopt ca_default -certopt no_validity -certopt no_serial -certopt no_subject -certopt no_extensions -certopt no_signame 
+
+
+#exit
+
+
+#openssl dgst -sha256 -verify /tmp/rleaf.pem -signature /tmp/rsig.sign /tmp/rreport.txt
+
+
+
 
 report_hex=$(eval "echo '$report' | $hexlify")
 sig_hex=$(eval "echo '$sig' | $hexlify")

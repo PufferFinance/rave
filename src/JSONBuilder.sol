@@ -28,7 +28,8 @@ contract JSONBuilder is RAVEConsts {
                 '","version":',
                 values.version,
                 ',"epidPseudonym":"',
-                values.epidPseudonym
+                values.epidPseudonym,
+                '"'
             )
         );
 
@@ -39,7 +40,7 @@ contract JSONBuilder is RAVEConsts {
             json = string(
                 abi.encodePacked(
                     json,
-                    '","advisoryURL":"',
+                    ',"advisoryURL":"',
                     values.advisoryURL,
                     '","advisoryIDs":',
                     values.advisoryIDs
@@ -51,7 +52,7 @@ contract JSONBuilder is RAVEConsts {
         json = string(
             abi.encodePacked(
                 json,
-                '","isvEnclaveQuoteStatus":"',
+                ',"isvEnclaveQuoteStatus":"',
                 values.isvEnclaveQuoteStatus,
                 '","isvEnclaveQuoteBody":"',
                 values.isvEnclaveQuoteBody,

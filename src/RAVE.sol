@@ -6,6 +6,7 @@ import { JSONBuilder } from "./JSONBuilder.sol";
 import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 import { Base64 } from "openzeppelin-contracts/contracts/utils/Base64.sol";
 import { RAVEBase } from "./RAVEBase.sol";
+import { Test, console } from "forge-std/Test.sol";
 
 /**
  * @title RAVE
@@ -13,7 +14,7 @@ import { RAVEBase } from "./RAVEBase.sol";
  * @custom:security-contact security@puffer.fi
  * @notice RAVe is a smart contract for verifying Remote Attestation evidence.
  */
-contract RAVE is RAVEBase, JSONBuilder, X509Verifier {
+contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
     using BytesUtils for *;
 
     constructor() { }
@@ -32,6 +33,7 @@ contract RAVE is RAVEBase, JSONBuilder, X509Verifier {
     ) public view override returns (bytes memory payload) {
         // Decode the encoded report JSON values to a Values struct and reconstruct the original JSON string
         (Values memory reportValues, bytes memory reportBytes) = _buildReportBytes(reportFieldsABI);
+        console.logBytes(reportBytes);
 
         // Verify the report was signed by the SigningPK
         if (!verifyRSA(reportBytes, sig, signingMod, signingExp)) {
@@ -40,12 +42,15 @@ contract RAVE is RAVEBase, JSONBuilder, X509Verifier {
 
         // Verify the report's contents match the expected
         payload = _verifyReportContents(reportValues, mrenclave, mrsigner);
+        return payload;
     }
 
     /**
      * @inheritdoc RAVEBase
      */
     function rave(
+        // ABI encoded list of report fields as bytes.
+        // current incorrectly passing json.
         bytes calldata report,
         bytes calldata sig,
         bytes memory leafX509Cert,
@@ -56,10 +61,11 @@ contract RAVE is RAVEBase, JSONBuilder, X509Verifier {
     ) public view override returns (bytes memory payload) {
         // Verify the leafX509Cert was signed with signingMod and signingExp
         (bytes memory leafCertModulus, bytes memory leafCertExponent) =
-            verifySignedX509(leafX509Cert, signingMod, signingExp);
+           verifySignedX509(leafX509Cert, signingMod, signingExp);
 
         // Verify report has expected fields then extract its payload
         payload = verifyRemoteAttestation(report, sig, leafCertModulus, leafCertExponent, mrenclave, mrsigner);
+        return payload;
     }
 
     /*

@@ -119,6 +119,8 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
         // Request .py sript to generate and sign mock RA evidence
         bytes memory resp = vm.ffi(cmds);
 
+        console.logBytes(resp);
+
         // Script expected to return an x509 signature and the RA report (with an encoding depenent on useJSONDecode)
         (bytes memory signature, bytes memory values) = abi.decode(resp, (bytes, bytes));
 
@@ -130,7 +132,7 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
 
         // Convert the random bytes into valid utf-8 bytes
         bytes memory payload = getFriendlyBytes(p).substring(0, 130);
-        console.logBytes(payload);
+        console.log(string(payload));
 
         // Request new RA evidence
         (bytes memory signature, bytes memory reportValues) =

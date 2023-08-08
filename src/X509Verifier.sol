@@ -7,8 +7,9 @@ import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 import { SafeMath } from "openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import { Utils } from "./Utils.sol";
+import { Test, console } from "forge-std/Test.sol";
 
-contract X509Verifier {
+contract X509Verifier is Test {
     using Asn1Decode for bytes;
     using BytesUtils for bytes;
     using Utils for bytes;
@@ -110,6 +111,9 @@ contract X509Verifier {
     ) public view returns (bool) {
         // The signature len must match the modulus length.
         if(sig.length != mod.length) {
+            console.log(sig.length);
+            console.log(mod.length);
+            console.log("sig len error");
             return false;
         }
 
@@ -117,6 +121,7 @@ contract X509Verifier {
         // ((2 ** 64) - 1).
         // There's a practical limit to the msg size for sha256.
         if(message.length > 18446744073709551615) {
+            console.log("msg error");
             return false;
         }
 
@@ -138,6 +143,8 @@ contract X509Verifier {
         */
         bytes32 digest = sha256(message);
         bytes memory encodedMsg = rsaPad(mod, digest, true);
+        console.logBytes(encodedMsg);
+        console.logBytes(res);
 
         // Compare recovered digest to encoded input digest.
         return success && (keccak256(res) == keccak256(encodedMsg));
@@ -247,6 +254,7 @@ contract X509Verifier {
         uint256 pkPtr = pubKey.root();
         pkPtr = pubKey.firstChildOf(pkPtr);
         bytes memory modulus = pubKey.bytesAt(pkPtr);
+        //modulus = abi.encodePacked(modulus.readBytesN(1, modulus.length));
 
         // Extract RSA exponent
         pkPtr = pubKey.nextSiblingOf(pkPtr);

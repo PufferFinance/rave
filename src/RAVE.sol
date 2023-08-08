@@ -25,7 +25,7 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
     function verifyRemoteAttestation(
         // ABI encoded list of report fields as bytes.
         bytes calldata reportFieldsABI,
-        bytes calldata sig,
+        bytes memory sig,
         bytes memory signingMod,
         bytes memory signingExp,
         bytes32 mrenclave,
@@ -33,7 +33,7 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
     ) public view override returns (bytes memory payload) {
         // Decode the encoded report JSON values to a Values struct and reconstruct the original JSON string
         (Values memory reportValues, bytes memory reportBytes) = _buildReportBytes(reportFieldsABI);
-        console.logBytes(reportBytes);
+        console.log(string(reportBytes));
 
         // Verify the report was signed by the SigningPK
         if (!verifyRSA(reportBytes, sig, signingMod, signingExp)) {
@@ -52,7 +52,7 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
         // ABI encoded list of report fields as bytes.
         // current incorrectly passing json.
         bytes calldata report,
-        bytes calldata sig,
+        bytes memory sig,
         bytes memory leafX509Cert,
         bytes memory signingMod,
         bytes memory signingExp,
@@ -64,7 +64,14 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
            verifySignedX509(leafX509Cert, signingMod, signingExp);
 
         // Verify report has expected fields then extract its payload
-        payload = verifyRemoteAttestation(report, sig, leafCertModulus, leafCertExponent, mrenclave, mrsigner);
+        console.logBytes(leafCertModulus);
+        console.logBytes(leafCertExponent);
+
+        bytes memory truncMod = abi.encodePacked(leafCertModulus.substring(1, leafCertModulus.length - 1));
+        console.logBytes(truncMod);
+        console.log(truncMod.length);
+
+        payload = verifyRemoteAttestation(report, sig, truncMod, leafCertExponent, mrenclave, mrsigner);
         return payload;
     }
 

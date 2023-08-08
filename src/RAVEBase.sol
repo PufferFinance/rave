@@ -15,7 +15,7 @@ abstract contract RAVEBase is IRave {
      */
     function verifyRemoteAttestation(
         bytes calldata report,
-        bytes calldata sig,
+        bytes memory sig,
         bytes memory signingMod,
         bytes memory signingExp,
         bytes32 mrenclave,
@@ -27,7 +27,7 @@ abstract contract RAVEBase is IRave {
      */
     function rave(
         bytes calldata report,
-        bytes calldata sig,
+        bytes memory sig,
         bytes memory leafX509Cert,
         bytes memory signingMod,
         bytes memory signingExp,

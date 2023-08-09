@@ -31,7 +31,7 @@ pub=$(echo $keygen_response | jq -r '.pk_hex')
 sig=$(echo $keygen_response | jq -r '.evidence.signed_report')
 report=$(echo $keygen_response | jq -r '.evidence.raw_report')
 x509=$(echo $keygen_response | jq -r '.evidence.signing_cert')
-x509_hex=$(eval "echo -e '$x509' | $hexlify")
+x509_hex=$(eval "echo -n -e '$x509' | $hexlify")
 
 
 intel_root_cert=$(python3 preprocess_rave_inputs.py --certs $x509_hex -get_root 1)
@@ -56,13 +56,14 @@ echo $report > /tmp/rreport.txt
 
 
 
-report_hex=$(eval "echo '$report' | $hexlify")
+report_hex=$(eval "echo -n '$report' | $hexlify")
+report_calldata_hex=$(eval "echo -n '$report_hex' | python3 report_json_to_calldata.py")
 sig_hex=$(eval "echo '$sig' | $hexlify")
 abi_out=$(
     python3 preprocess_rave_inputs.py \
     --abi_encode 1 \
     --certs $x509_hex \
-    --report $report_hex \
+    --report $report_calldata_hex \
     --sig $sig_hex \
     --sig_mod $sig_mod \
     --sig_exp $sig_exp \

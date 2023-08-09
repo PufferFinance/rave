@@ -67,6 +67,7 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
         console.logBytes(leafCertModulus);
         console.logBytes(leafCertExponent);
 
+        // TODO: remove this patch for mod extraction.
         bytes memory truncMod = abi.encodePacked(leafCertModulus.substring(1, leafCertModulus.length - 1));
         console.logBytes(truncMod);
         console.log(truncMod.length);

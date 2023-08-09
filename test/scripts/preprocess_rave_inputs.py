@@ -52,11 +52,13 @@ intel_root_cert, leaf_cert = certs
 
 # Intel root certificate output.
 if args["get_root"] is not None:
-    print(repr(intel_root_cert)[1:-1])
+    print(repr(intel_root_cert)[1:-1],)
+    exit()
 
 # Leaf certificate output.
 if args["get_leaf"] is not None:
-    print(repr(leaf_cert)[1:-1])
+    print(repr(leaf_cert)[1:-1],)
+    exit()
 
 if args["abi_encode"] is not None:
     # Trucate 0x prefix from args.
@@ -75,6 +77,12 @@ if args["abi_encode"] is not None:
         args["mrenclave"],
         args["mrsigner"]
     ]
+
+    for field in unhex_list:
+        print(" 0x" + field,)
+
+    exit()
+
 
     # Convert hex strings to bytes.
     bytes_list = list_to_b([
@@ -99,7 +107,8 @@ if args["abi_encode"] is not None:
 
     # Add function name to out.
     out = sha3_hex(b"rave(bytes,bytes,bytes,bytes,bytes,bytes32,bytes32)")[:8]
-    out = to_s(out) + ffi_payload.hex()
+    # to_s(out) + 
+    out = ffi_payload.hex()
 
     # Then dump everything as hex.
     print(out,)

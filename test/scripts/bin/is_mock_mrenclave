@@ -1,0 +1,12 @@
+INPUT=$(./echo $(cat -) | ./trim_whitespace)
+MRENCLAVE="d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f"
+
+./echo $MRENCLAVE | ./is_valid_hex_len > /dev/null
+./echo $INPUT | ./is_valid_hex_len > /dev/null
+
+if [ "$INPUT" = "$MRENCLAVE" ]; then
+    ./echo '1'
+else
+    echo 'input mrenclave not correct '$INPUT >> error.log
+    ./echo '0'
+fi

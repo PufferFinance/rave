@@ -1,2 +1,14 @@
 Probably use fixed key bit size to make testing easier.
     Current padding algorithm tests break (they assume a certain bit size I think)
+
+Running 1 test for test/RAVE.t.sol:RaveSanityTester
+[FAIL. Reason: BadReportSignature()] testOnSanityCheckedValues() (gas: 6835595)
+Test result: FAILED. 0 passed; 1 failed; 0 skipped; finished in 497.76ms
+
+
+Running 1 test for test/RAVE.t.sol:RaveInstanceTest
+[FAIL. Reason: EvmError: Revert] setUp() (gas: 0)
+Test result: FAILED. 0 passed; 1 failed; 0 skipped; finished in 118.30ms
+^C
+
+

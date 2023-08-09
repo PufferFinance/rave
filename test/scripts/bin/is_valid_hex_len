@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Record hex len errors.
+input=$(cat -)
+n=${#input}
+if [ $(expr $n % 2) -ne 0 ]; then
+    echo 'odd len hex '$input >> error.log
+    ./echo '0'
+else
+    ./echo '1'
+fi

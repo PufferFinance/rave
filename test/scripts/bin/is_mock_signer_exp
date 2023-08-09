@@ -1,0 +1,12 @@
+INPUT=$(./echo $(cat -) | ./trim_whitespace)
+SIGNER_EXP="010001"
+
+./echo $SIGNER_EXP | ./is_valid_hex_len > /dev/null
+./echo $INPUT | ./is_valid_hex_len > /dev/null
+
+if [ "$INPUT" = "$SIGNER_EXP" ]; then
+    ./echo '1'
+else
+    echo 'input signer exp not correct '$INPUT >> error.log
+    ./echo '0'
+fi

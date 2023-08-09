@@ -143,8 +143,11 @@ contract X509Verifier is Test {
         */
         bytes32 digest = sha256(message);
         bytes memory encodedMsg = rsaPad(mod, digest, true);
-        console.logBytes(encodedMsg);
+        bytes memory encodedMsg2 = rsaPad(mod, digest, false);
+
         console.logBytes(res);
+        console.logBytes(encodedMsg);
+        console.logBytes(encodedMsg2);
 
         // Compare recovered digest to encoded input digest.
         return success && (keccak256(res) == keccak256(encodedMsg));

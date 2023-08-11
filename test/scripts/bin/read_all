@@ -1,0 +1,5 @@
+#!/usr/bin/python3
+
+import sys, shlex
+read_all = sys.stdin.read()
+print('export INPUT=%s' % (shlex.quote(read_all)))

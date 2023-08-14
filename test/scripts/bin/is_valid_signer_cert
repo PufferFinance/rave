@@ -1,0 +1,8 @@
+#!/bin/bash
+
+<<comment
+    A signer cert will be valid if its signed by a cert issued by
+    Intels attestation root ca cert.
+    cat intel*pem | openssl x509 -text -noout
+comment
+

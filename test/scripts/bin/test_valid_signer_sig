@@ -1,0 +1,95 @@
+#!/bin/bash
+
+
+keygen_response=$(cat "../ss_out/keygen_response")
+
+# b64
+sig=$(echo $keygen_response | jq -r '.evidence.signed_report')
+sig=$(echo "$sig")
+
+# Json
+report=$(echo $keygen_response | jq -r '.evidence.raw_report')
+
+# pem ? + pem ?
+cert=$(cat ../ss_out/cert)
+
+uuid=$(cat /proc/sys/kernel/random/uuid)
+
+
+
+
+
+# ase64 --decode
+./echo "$sig" | base64 --decode > /tmp/$uuid.sig
+./echo "$report" > /tmp/$uuid.report
+
+echo $uuid
+echo
+
+echo "$cert" | openssl x509 -pubkey -noout > "/tmp/$uuid.pubkey"
+
+
+
+#cat /tmp/$uuid.report
+
+#cat /tmp/$uuid.sig
+
+#openssl rsautl -verify -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig" \
+#| dd skip=$((2+2+13+2)) bs=1 2> /dev/null \
+#| xxd -ps -c 32
+
+#openssl rsautl -verify  -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig"
+
+#openssl rsautl -verify -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig"   | dd skip=$((2+2+13+2)) bs=1 2> /dev/null | xxd -ps -c 32
+
+#openssl rsautl -verify -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig"  | openssl asn1parse -inform der 
+
+openssl rsautl -verify -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig" | ./to_hex
+
+openssl rsautl -verify -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig"  | openssl asn1parse -inform der 
+
+
+
+echo
+
+
+#cat /tmp/$uuid.sig | ./to_hex
+
+./echo "$report" | ./rsa_digest
+
+./echo "$report" | openssl dgst -sha256 
+
+exit
+
+openssl dgst -verify "/tmp/$uuid.pubkey" -keyform PEM -sha256 -signature "/tmp/$uuid.sig" -binary "/tmp/$uuid.report"
+
+
+
+
+
+<<comment
+
+
+
+
+        Serial Number:
+            d1:07:76:5d:32:a3:b0:96
+        Signature Algorithm: sha256WithRSAEncryption
+        Validity
+            Not Before: Nov 22 09:36:58 2016 GMT
+            Not After : Nov 20 09:36:58 2026 GMT
+        Subject: C = US, ST = CA, L = Santa Clara, O = Intel Corporation, CN = Intel SGX Attestation Report Signing
+        X509v3 extensions:
+            X509v3 Authority Key Identifier: 
+                keyid:78:43:7B:76:A6:7E:BC:D0:AF:7E:42:37:EB:35:7C:3B:87:01:51:3C
+
+            X509v3 Key Usage: critical
+                Digital Signature, Non Repudiation
+            X509v3 Basic Constraints: critical
+                CA:FALSE
+            X509v3 CRL Distribution Points: 
+
+                Full Name:
+                  URI:http://trustedservices.intel.com/content/CRL/SGX/AttestationReportSigningCA.crl
+
+comment

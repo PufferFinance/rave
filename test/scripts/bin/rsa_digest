@@ -1,0 +1,73 @@
+#!/usr/bin/python3
+
+"""
+Generate RSA PKCS#1 encoded messages so they can be used
+to compare to the implementation in X509Verifier.sol.
+"""
+
+
+import os, eth_abi, argparse, sys
+import binascii
+import hashlib
+from Crypto.Signature import pkcs1_15
+from Crypto.Signature.pkcs1_15 import _EMSA_PKCS1_V1_5_ENCODE
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
+from Crypto.Util import number
+from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
+
+
+def get_rsa_pkcs1_padding(msg, mod_bits, include_null=True):
+    # Load RSA key params from PEM private key.
+    #key = RSA.generate(key_bits)
+    """
+    This RSA library forces you to generate an RSA Key
+    to be able to use the padding object. But there's
+    nothing in the padding algorithm that requires
+    that. This is a lazy approach.
+    """
+
+    # Hash the message with SHA256.
+    h = SHA256.new(msg)
+
+    # Create a padding object. 
+    #pad = pkcs1_15.new(key)
+
+    # See 8.2.1 in RFC 3447.
+    #print(pad._key.n)
+    #modBits = number.size(pad._key.n)
+    #modBits = key_bits
+
+    # Convert from bits to bytes.
+    k = ceil_div(modBits, 8)
+
+    # Return the padded message with null params for der(HID, h).
+    # DerObject.__init__(self, 0x05, b'', None, False)
+    # b'\x05\x00'
+    em = _EMSA_PKCS1_V1_5_ENCODE(h, k, include_null)
+
+    # NOTE: Very important: may need to test both of these in our script.
+    # WITH and WITHOUT the algorithm id!
+    return em
+
+if __name__ == "__main__":
+    data = sys.stdin.buffer.read()
+    print(data)
+    exit()
+    data = hashlib.sha256(data).digest()
+    mod_bits = 2048
+    if len(sys.argv) == 2:
+        key_bmod_bitsits = int(sys.argv[1])
+
+    out = get_rsa_pkcs1_padding(data, key_bits)
+    out_hex = binascii.hexlify(out).decode("utf-8")
+    digest = hashlib.sha256(out).digest()
+    digest_hex = binascii.hexlify(digest).decode("utf-8")
+    print(out_hex, end="")
+
+
+"""
+031300d060960864801650304020105000420834be5b42794496d0872cfbe8f172f6fde906c82b8efa49f909c818440f005f6
+03031300d060960864801650304020105000420b8d039f83bfeef6376720419f245335d0d47569e8bd6d1f5f0e13e41dc1259df
+
+"""

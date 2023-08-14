@@ -1,0 +1,19 @@
+#!/usr/bin/python3
+
+import sys
+import binascii
+import struct
+
+offset = int(sys.argv[1])
+data = sys.stdin.buffer.read()
+
+p = 0
+for i in range(0, offset + 1):
+    hdr_hex = data[p:p + 16]; p += 16
+    hdr = binascii.unhexlify(hdr_hex)
+    seg_len = struct.unpack("Q", hdr)[0]
+    seg_hex = data[p:p + seg_len]; p += seg_len;
+    if i == offset:
+        seg = binascii.unhexlify(seg_hex)
+        print(seg.decode(), end="")
+        exit()

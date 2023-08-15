@@ -13,7 +13,14 @@
     detect failure cases.
 """
 
-import re, sys
+import re, sys, binascii
+
+# Utils.
+to_h = binascii.hexlify
+to_b = lambda x: x if isinstance(x, bytes) else x.encode("ascii")
+to_s = lambda x: x if isinstance(x, str) else x.decode("utf-8")
+
+# Output matching.
 hey = sys.stdin.read()
 pattern = sys.argv[1]
 needles = re.findall(pattern, hey, re.MULTILINE)
@@ -33,5 +40,9 @@ if len(needles):
 
     # Repr is a simple way to escape it.
     matches = [repr(x) for x in matches]
+    if len(sys.argv) > 2:
+        matches = [to_s(to_h(to_b(x[1:-1]))) for x in matches]
+
+    # Show results.
     out = " ".join(matches)
     print(out, end="")

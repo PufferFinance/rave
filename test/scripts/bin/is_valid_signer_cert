@@ -9,6 +9,8 @@
     cat ../../../certs/attestation_report_signer_example.pem | ./is_valid_signer_cert
 
     stdin: OK
+
+    ln -s ../../../certs certs
 comment
 
 ret=$(openssl verify -verbose -CAfile ../../../certs/intel_attestation_report_root_ca..pem 2> /dev/null)

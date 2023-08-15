@@ -39,7 +39,7 @@ def get_rsa_pkcs1_padding(msg, mod_bits, include_null=True):
     #modBits = key_bits
 
     # Convert from bits to bytes.
-    k = ceil_div(modBits, 8)
+    k = ceil_div(mod_bits, 8)
 
     # Return the padded message with null params for der(HID, h).
     # DerObject.__init__(self, 0x05, b'', None, False)
@@ -52,14 +52,15 @@ def get_rsa_pkcs1_padding(msg, mod_bits, include_null=True):
 
 if __name__ == "__main__":
     data = sys.stdin.buffer.read()
-    print(data)
-    exit()
-    data = hashlib.sha256(data).digest()
     mod_bits = 2048
     if len(sys.argv) == 2:
-        key_bmod_bitsits = int(sys.argv[1])
+        mod_bits = int(sys.argv[1])
 
-    out = get_rsa_pkcs1_padding(data, key_bits)
+    inc_null = True
+    if len(sys.argv) == 3:
+        inc_null = bool(sys.argv[2])
+
+    out = get_rsa_pkcs1_padding(data, mod_bits, inc_null)
     out_hex = binascii.hexlify(out).decode("utf-8")
     digest = hashlib.sha256(out).digest()
     digest_hex = binascii.hexlify(digest).decode("utf-8")
@@ -67,7 +68,7 @@ if __name__ == "__main__":
 
 
 """
-031300d060960864801650304020105000420834be5b42794496d0872cfbe8f172f6fde906c82b8efa49f909c818440f005f6
-03031300d060960864801650304020105000420b8d039f83bfeef6376720419f245335d0d47569e8bd6d1f5f0e13e41dc1259df
+13031300d060960864801650304020105000420834be5b42794496d0872cfbe8f172f6fde906c82b8efa49f909c818440f005f6
+13031300d060960864801650304020105000420834be5b42794496d0872cfbe8f172f6fde906c82b8efa49f909c818440f005f6
 
 """

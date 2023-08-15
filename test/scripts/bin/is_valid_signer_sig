@@ -1,9 +1,75 @@
 #!/bin/bash
 
-# stdin = signer cert, arg 1 = sig
+<<comment
 
-UUID=$(cat /proc/sys/kernel/random/uuid)
-echo $UUID
-exit
-pub_key_hex=$(openssl x509 -pubkey -noout | ./to_hex)
-echo "$pub_key_hex" | ./from_hex | openssl dgst -signature sigfile datafile
+The 'secure signer' enclave returns a file called 'keygen_response in
+a directory called 'ss_out.' This file is a JSON format and the
+relevant fields need to be handled just right to validate it.
+
+["evidence"]["signing_cert"] = This field contains two x509 certificates
+appended together in PEM format. The entire field has been escaped so
+that new lines are replaced with \n and thus the reports need to be
+unescaped to validate successfully. The certificates are as follows:
+
+    (1) The Intel Attestation Report CA root certificate.
+    (2) The corresponding certificate used by the enclave to sign the
+    attestation report called the 'report signing certificate.'
+    
+    The CA in (1) issues or signs the certificate in (2). Thus,
+    one can verify if a report signing certificate is valid by
+    comparing it against the CA root certificate. Certificate
+    authorities or CAs may also publish revocation lists. That
+    may need to be consulted for certificate validity.
+
+["evidence"]["raw_report"] = This field is the raw report, byte for
+byte that was passed into the RSA signing function. RSA sign
+will take this message and apply a special padding algorithm to it.
+So the message is not used verbatim. What ends up being 'signed' is
+the encryption of this padded message. You can view what this looks
+like using ./echo "data" | ./rsa_digest.
+
+["evidence"]["sig"] = This is the base64 of a raw signature in binary
+or DER format.
+
+The steps to verify a signer sig are as follows:
+
+(1) Extract the public key from cert ["evidence"]["signing_cert"][1].
+(2) Base64 decode the signature and save it.
+(3) Use openssl dgst -verify with the pub key, signature, and report. 
+    (1) The public key is in PEM format.
+    (2) The signature in binary format.
+    (3) The digest is SHA256.
+
+See the below script for an example of this process.
+The file "test_valid_signer_sig" directly uses an ss_out folder.
+
+comment
+
+# stdin = signer cert, arg 1 = sig
+input=$(cat -)
+uuid=$(cat /proc/sys/kernel/random/uuid)
+signer_cert=$(./echo "$input" | ./unpack 0)
+raw_report=$(./echo "$input" | ./unpack 1)
+sig_hex=$(./echo "$input" | ./unpack 2 | base64 --decode | ./to_hex)
+
+# Extract public key from x509 cert.
+echo "$signer_cert" | openssl x509 -pubkey -noout > "/tmp/$uuid.pubkey" 2>/dev/null  
+
+# Save signature to file.
+# Note regular echo appends a new line which we don't want!
+./echo "$sig_hex" | ./from_hex > "/tmp/$uuid.sig"
+
+# Save report to file.
+# Note regular echo appends a new line which we don't want!
+./echo "$raw_report" > "/tmp/$uuid.report"
+
+# Run the final validation command.
+out=$(openssl dgst -verify "/tmp/$uuid.pubkey" -keyform PEM -sha256 -signature "/tmp/$uuid.sig" -binary "/tmp/$uuid.report" 2>/dev/null)
+if [ "$out" == "Verified OK" ]; then
+    ./echo "1"
+else
+    ./echo "0"
+fi
+
+# Cleanup
+rm "/tmp/$uuid"*

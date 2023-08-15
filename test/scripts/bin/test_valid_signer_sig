@@ -1,95 +1,69 @@
 #!/bin/bash
 
+# Input path to ss_out directory.
+ss_out_path=$1
+if [ "$ss_out_path" == "" ]; then
+    echo "./test_valid_signer_sig '../ss_out'"
+    exit
+fi
 
-keygen_response=$(cat "../ss_out/keygen_response")
-
-# b64
-sig=$(echo $keygen_response | jq -r '.evidence.signed_report')
-sig=$(echo "$sig")
-
-# Json
+# Extract signed report from secure signer.
+keygen_response=$(cat "$ss_out_path/keygen_response")
+b64_sig=$(echo $keygen_response | jq -r '.evidence.signed_report')
 report=$(echo $keygen_response | jq -r '.evidence.raw_report')
 
-# pem ? + pem ?
-cert=$(cat ../ss_out/cert)
+# Convert reports to a hex list.
+certs=$(echo $keygen_response | jq -r '.evidence.signing_cert' | ./re_find "([-]{2,}BEGIN[ ]+CERTIFICATE[-]{2,}(?:[\s\S]+?)[-]{2,}END[ ]+CERTIFICATE[-]{2,})+" 1)
 
-uuid=$(cat /proc/sys/kernel/random/uuid)
+# Convert cert list to array.
+certs=($certs)
 
+# Get the signer cert (certificate 2)
+cert=${certs[0]}
 
+# Remove escape sequences from certificate.
+cert=$(echo -e $(./echo "$cert" | ./from_hex))
 
+# Check its a valid signer cert.
+is_valid=$(echo "$cert" | ./is_valid_signer_cert)
+if [ "$is_valid" != "1" ]; then
+    ./echo "0"
+    exit
+fi
 
+# Convert all data into a hex format.
+data=$(eval 
+    $(echo "$b64_sig" | 
+        # Don't add a new line.
+        $(./echo "$report" | 
+            $(echo "$cert" | ./pack)
+        )
+    )
+)
 
-# ase64 --decode
-./echo "$sig" | base64 --decode > /tmp/$uuid.sig
-./echo "$report" > /tmp/$uuid.report
-
-echo $uuid
-echo
-
-echo "$cert" | openssl x509 -pubkey -noout > "/tmp/$uuid.pubkey"
-
-
-
-#cat /tmp/$uuid.report
-
-#cat /tmp/$uuid.sig
-
-#openssl rsautl -verify -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig" \
-#| dd skip=$((2+2+13+2)) bs=1 2> /dev/null \
-#| xxd -ps -c 32
-
-#openssl rsautl -verify  -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig"
-
-#openssl rsautl -verify -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig"   | dd skip=$((2+2+13+2)) bs=1 2> /dev/null | xxd -ps -c 32
-
-#openssl rsautl -verify -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig"  | openssl asn1parse -inform der 
-
-openssl rsautl -verify -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig" | ./to_hex
-
-openssl rsautl -verify -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig"  | openssl asn1parse -inform der 
-
-
-
-echo
-
-
-#cat /tmp/$uuid.sig | ./to_hex
-
-./echo "$report" | ./rsa_digest
-
-./echo "$report" | openssl dgst -sha256 
-
+# Pass input to validate.
+./echo "$data" | ./is_valid_signer_sig
 exit
-
-openssl dgst -verify "/tmp/$uuid.pubkey" -keyform PEM -sha256 -signature "/tmp/$uuid.sig" -binary "/tmp/$uuid.report"
-
-
-
-
 
 <<comment
 
+The commands below shows exactly how the message looks like
+prior to being 'signed' or encrypted with RSA. It is a proof
+that demonstrated how the implementation of RSA padding in
+the smart contract exactly matches the [padded message]
+recovered from the signature with the public key. This
+proves that a given message (the report) results in
+a given signature from a public key.
 
-
-
-        Serial Number:
-            d1:07:76:5d:32:a3:b0:96
-        Signature Algorithm: sha256WithRSAEncryption
-        Validity
-            Not Before: Nov 22 09:36:58 2016 GMT
-            Not After : Nov 20 09:36:58 2026 GMT
-        Subject: C = US, ST = CA, L = Santa Clara, O = Intel Corporation, CN = Intel SGX Attestation Report Signing
-        X509v3 extensions:
-            X509v3 Authority Key Identifier: 
-                keyid:78:43:7B:76:A6:7E:BC:D0:AF:7E:42:37:EB:35:7C:3B:87:01:51:3C
-
-            X509v3 Key Usage: critical
-                Digital Signature, Non Repudiation
-            X509v3 Basic Constraints: critical
-                CA:FALSE
-            X509v3 CRL Distribution Points: 
-
-                Full Name:
-                  URI:http://trustedservices.intel.com/content/CRL/SGX/AttestationReportSigningCA.crl
+Anyone can use the RSA modulus (public key) to encrypt a
+message but only the owner can decrypt it. With RSA as
+a 'signature' scheme we're not interested in the secrecy of
+the message since the message being verified [the report]
+is already public.
 
 comment
+
+keybits=$(echo "$cert" | ./get_cert_keybits)
+fm=$(openssl rsautl -verify -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig" | ./to_hex)
+xm=$(./echo "$report" | ./rsa_digest $keybits)
+python3 -c "x = '$fm'; y = '$xm'; print(int(y[-len(x):] == x), end='')"

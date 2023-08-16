@@ -1,13 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity >=0.8.0 <0.9.0;
 
-import { Asn1Decode, NodePtr } from "rave/ASN1Decode.sol";
+import { Asn1Decode, NodePtr } from "./ASN1Decode.sol";
 import { RSAVerify } from "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
 import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
+import { SafeMath } from "openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
+import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import { Utils } from "./Utils.sol";
+import { Test, console } from "forge-std/Test.sol";
 
-library X509Verifier {
+contract X509Verifier is Test {
     using Asn1Decode for bytes;
     using BytesUtils for bytes;
+    using Utils for bytes;
+
+
+    bytes constant _SHA256_PAD_ID_WITH_NULL = hex"3031300d060960864801650304020105000420";
+    bytes constant _SHA256_PAD_ID_WITHOUT_NULL = hex"302f300b06096086480165030402010420";
+
+    constructor() { }
 
     /*
      * @dev Verifies an x509 certificate was signed (RSASHA256) by the supplied public key. 
@@ -28,6 +39,118 @@ library X509Verifier {
         // Digest is last 32 bytes of res
         bytes32 recovered = res.readBytes32(res.length - 32);
         return success && recovered == sha256(childCertBody);
+    }
+
+    // withNULL seems true by default.
+    function rsaPad(bytes memory mod, bytes32 digest, bool withNULL) public pure returns (bytes memory) {
+        // RSA pub key 'size' / bit length.
+        uint256 modBits = SafeMath.mul(mod.length, 8);
+        uint256 emBits = SafeMath.sub(modBits, 1);
+        uint256 emLen = Math.ceilDiv(emBits, 8);
+
+        // Select digest OID portion based on bool flag.
+        bytes memory digestOID;
+        if(withNULL) {
+            digestOID = _SHA256_PAD_ID_WITH_NULL;
+        } else {
+            digestOID = _SHA256_PAD_ID_WITHOUT_NULL;
+        }
+
+        // Is message long enough?
+        uint256 tLen = SafeMath.add(digestOID.length, digest.length);
+        if(emLen < SafeMath.add(tLen, 11)) {
+            revert();
+        }
+
+        //        (1)       (2)      (3)   (4)         (5)
+        // out = 00 01 (FF * ps_len) 00 SHA256ID... MSG_DIGEST
+        uint256 psLen = SafeMath.sub(SafeMath.sub(emLen, tLen), 3);
+        uint256 outLen = SafeMath.add(SafeMath.add(3, psLen), tLen);
+        bytes memory out = new bytes(outLen);
+
+        // (1): Leading 00 FF bytes.
+        out[0] = hex"00";
+        out[1] = hex"01";
+
+        // (2): Add FF section to padding.
+        uint256 p = 2; uint256 i = 0;
+        for(i = 0; i < psLen; i++) {
+            out[p++] = hex"ff";
+        }
+
+        // (3): Followed by 00.
+        out[p++] = hex"00";
+
+        // (4): Digest algorithm ID.
+        for(i = 0; i < digestOID.length; i++) {
+            out[p++] = digestOID[i];
+        }
+
+        // (5): Digest of the message to be padded.
+        for(i = 0; i < digest.length; i++) {
+            out[p++] = digest[i];
+        }
+
+        return out;
+    }
+
+    /*
+        Verifies an RSA 'signature' (encryption over a message)
+        matches what is specified in PKCS#1. Note: that the
+        format of this encoding allows for the digest algorithm
+        to include an optional 'NULL parameter.' It is assumed
+        this is included and hence we don't test for a valid
+        sig for a message where this parameter isn't include.
+        But regular implementations of RSA verification do this.
+    */
+    function verifyRSA(
+        bytes memory message,
+        bytes memory sig,
+        bytes memory mod,
+        bytes memory exp
+    ) public view returns (bool) {
+        // The signature len must match the modulus length.
+        if(sig.length != mod.length) {
+            console.log(sig.length);
+            console.log(mod.length);
+            console.log("sig len error");
+            return false;
+        }
+
+        // Invalid msg length.
+        // ((2 ** 64) - 1).
+        // There's a practical limit to the msg size for sha256.
+        if(message.length > 18446744073709551615) {
+            console.log("msg error");
+            return false;
+        }
+
+        // Recover the PKCS#1 encoded message from the signature.
+        // Message gets encoded according to rfc8017#section-9.2.
+        // That becomes the value input to sha256.
+        (bool success, bytes memory res) = RSAVerify.rsarecover(
+            mod,
+            exp,
+            sig
+        );
+
+        /*
+        The message to encrypt is padded such that the length
+        matches the modulus. To 'compress' the message sha256 is
+        used yielding a 32 byte digest. The digest is then
+        prefixed according to the PKCS#1 padding scheme.
+        Encryption of the result becomes the full signature.
+        */
+        bytes32 digest = sha256(message);
+        bytes memory encodedMsg = rsaPad(mod, digest, true);
+        bytes memory encodedMsg2 = rsaPad(mod, digest, false);
+
+        console.logBytes(res);
+        console.logBytes(encodedMsg);
+        console.logBytes(encodedMsg2);
+
+        // Compare recovered digest to encoded input digest.
+        return success && (keccak256(res) == keccak256(encodedMsg));
     }
 
     /*
@@ -84,6 +207,7 @@ library X509Verifier {
 
         // Verify the parent signed the certBody
         require(verifyChildCert(certBody, signature, parentMod, parentExp), "verifyChildCert fail");
+        //require(verifyRSA(certBody, signature, parentMod, parentExp), "verifyChildCert fail");
 
         //  ----------------
         // Begin traversing the tbsCertificate
@@ -133,6 +257,7 @@ library X509Verifier {
         uint256 pkPtr = pubKey.root();
         pkPtr = pubKey.firstChildOf(pkPtr);
         bytes memory modulus = pubKey.bytesAt(pkPtr);
+        //modulus = abi.encodePacked(modulus.readBytesN(1, modulus.length));
 
         // Extract RSA exponent
         pkPtr = pubKey.nextSiblingOf(pkPtr);

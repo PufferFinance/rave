@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# Input path to ss_out directory.
+ss_out_path=$1
+if [ "$ss_out_path" == "" ]; then
+    echo "./test_valid_signer_sig '../ss_out'"
+    exit
+fi
+
+# Extract signed report from secure signer.
+keygen_response=$(cat "$ss_out_path/keygen_response")
+b64_sig=$(echo $keygen_response | jq -r '.evidence.signed_report')
+report=$(echo $keygen_response | jq -r '.evidence.raw_report')
+
+# Convert reports to a hex list.
+certs=$(echo $keygen_response | jq -r '.evidence.signing_cert')
+cert=$(echo "$certs" | ./get_report_cert)
+
+# Check its a valid signer cert.
+is_valid=$(echo "$cert" | ./is_valid_signer_cert)
+if [ "$is_valid" != "1" ]; then
+    ./echo "0"
+    exit
+fi
+
+# Convert all data into a hex format.
+data=$(eval 
+    $(echo "$b64_sig" | 
+        # Don't add a new line.
+        $(./echo "$report" | 
+            $(echo "$cert" | ./pack)
+        )
+    )
+)
+
+# Pass input to validate.
+./echo "$data" | ./is_valid_signer_sig
+exit
+
+<<comment
+
+The commands below shows exactly how the message looks like
+prior to being 'signed' or encrypted with RSA. It is a proof
+that demonstrated how the implementation of RSA padding in
+the smart contract exactly matches the [padded message]
+recovered from the signature with the public key. This
+proves that a given message (the report) results in
+a given signature from a public key.
+
+Anyone can use the RSA modulus (public key) to encrypt a
+message but only the owner can decrypt it. With RSA as
+a 'signature' scheme we're not interested in the secrecy of
+the message since the message being verified [the report]
+is already public.
+
+comment
+
+# Extended commands to compare recovered PKCS#1 messages.
+keybits=$(echo "$cert" | ./get_cert_keybits)
+fm=$(openssl rsautl -verify -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig" | ./to_hex)
+xm=$(./echo "$report" | ./rsa_digest $keybits)
+python3 -c "x = '$fm'; y = '$xm'; print(int(y[-len(x):] == x), end='')"

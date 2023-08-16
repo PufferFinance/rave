@@ -1,0 +1,12 @@
+INPUT=$(./echo $(cat -) | ./trim_whitespace)
+LEAF_SIG="4c15c80ec83f5ebbee20f1be0cf1f7c1850179988442cba027152e01b79474592f2cd526fc8b2b2808b9c6afeaed642061aafa9b92ffcedc7cfbc1418bb9865719ef86c9de9f01bc166cf5f2ce392a70d5cd2017336c8817eaad129ad9ff5dd88eb3ecc26b0d21e04aba01c0bf303ed5e343e85104ea7a6e45514938158358825bf339fbd5116581218575551478e49c0aecfb1eb40c863c4401c44da2aa5634e335512915b38d77c7dc693ee8b9fa41f3bf9d939c1c5e382c010c42da237650c16a3ff4ac504376b215b1fc08f69a3dc0c3d0404f643e42e3078a70db5d61305c87e90ad39968b28e333e24b0887b0f01ace55d647805575fd96648c006abe3"
+
+./echo $LEAF_SIG | ./is_valid_hex_len > /dev/null
+./echo $INPUT | ./is_valid_hex_len > /dev/null
+
+if [ "$INPUT" = "$LEAF_SIG" ]; then
+    ./echo '1'
+else
+    echo 'input leaf sig not correct '$INPUT >> error.log
+    ./echo '0'
+fi

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+pem_match=$(./re_find '(CERTIFICATE)|(X509 CRL)')
+if [[ -z $pem_match ]]; then
+    ./echo '0'
+else
+    ./is_valid_cert
+fi
+
+exit 
+

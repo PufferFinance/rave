@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Check hex len.
+input=$(cat -)
+./echo $input | ./is_valid_hex_len  > /dev/null
+
+# Doesn't add extra characters.
+./echo $input | xxd -r -p

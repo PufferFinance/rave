@@ -1,0 +1,12 @@
+INPUT=$(./echo $(cat -) | ./trim_whitespace)
+REPORT_PAYLOAD="a4f1e2de42ade42856a6e7b029432278d76ad1c3e86ceccd6f2f46532861c20c0615a3b4f8a3e283d23c09255e51360e"
+
+./echo $REPORT_PAYLOAD | ./is_valid_hex_len > /dev/null
+./echo $INPUT | ./is_valid_hex_len > /dev/null
+
+if [ "$INPUT" = "$REPORT_PAYLOAD" ]; then
+    ./echo '1'
+else
+    echo 'input report payload not correct '$INPUT >> error.log
+    ./echo '0'
+fi

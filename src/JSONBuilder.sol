@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity >=0.8.0 <0.9.0;
 
-contract JSONBuilder {
+import { RAVEConsts } from "./RAVEConsts.sol";
+
+contract JSONBuilder is RAVEConsts {
     struct Values {
         bytes id;
         bytes timestamp;
@@ -9,11 +11,14 @@ contract JSONBuilder {
         bytes epidPseudonym;
         bytes advisoryURL;
         bytes advisoryIDs;
-        bytes isvEnclaveQuoteStatus;
+        bytes isvEnclaveQuoteStatus;    
+
+        // needs to be base64.
         bytes isvEnclaveQuoteBody;
     }
 
     function buildJSON(Values memory values) public pure returns (string memory json) {
+        // Meta data for enclave report.
         json = string(
             abi.encodePacked(
                 '{"id":"',
@@ -23,16 +28,30 @@ contract JSONBuilder {
                 '","version":',
                 values.version,
                 ',"epidPseudonym":"',
-                values.epidPseudonym
+                values.epidPseudonym,
+                '"'
             )
         );
+
+        // Skip including advisory fields if OK_STATUS.
+        // These fields are optional.
+        bytes32 status = keccak256(values.isvEnclaveQuoteStatus);
+        if(status == HARDENING_STATUS) {
+            json = string(
+                abi.encodePacked(
+                    json,
+                    ',"advisoryURL":"',
+                    values.advisoryURL,
+                    '","advisoryIDs":',
+                    values.advisoryIDs
+                )
+            );
+        }
+
+        // Remaining report fields.
         json = string(
             abi.encodePacked(
                 json,
-                '","advisoryURL":"',
-                values.advisoryURL,
-                '","advisoryIDs":',
-                values.advisoryIDs,
                 ',"isvEnclaveQuoteStatus":"',
                 values.isvEnclaveQuoteStatus,
                 '","isvEnclaveQuoteBody":"',
@@ -40,6 +59,8 @@ contract JSONBuilder {
                 '"}'
             )
         );
+
+    
     }
 }
 

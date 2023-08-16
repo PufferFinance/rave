@@ -1,0 +1,4 @@
+#!/bin/bash
+
+input=$(cat -)
+echo $input | tr -d '\011\012\013\014\015\040'

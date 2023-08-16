@@ -2,6 +2,9 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import { Test, console } from "forge-std/Test.sol";
+import { SafeMath } from "openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
+
+
 
 library BytesHelper {
     function notAllZeroes(bytes memory data) public pure returns (bool) {
@@ -52,6 +55,7 @@ contract X509GenHelper is Test {
     bytes public CERT_BYTES;
     bytes public CERT_BODY_BYTES;
     bytes public CERT_SIG;
+    bytes public CERT_PRIV_PEM;
     bytes public MODULUS;
     bytes public EXPONENT = hex"010001";
 
@@ -74,6 +78,15 @@ contract X509GenHelper is Test {
         cmds[3] = X509_NAME;
         cmds[4] = X509_PRIV_KEY_NAME;
         vm.ffi(cmds);
+    }
+
+    function readX509PrivPEM() public {
+        // Get DER-encoded self-signed x509 as hex string
+        string[] memory cmds = new string[](3);
+        cmds[0] = "bash";
+        cmds[1] = "test/scripts/runX509GetPrivPEM.sh";
+        cmds[2] = X509_PRIV_KEY_NAME;
+        CERT_PRIV_PEM = vm.ffi(cmds);
     }
 
     function readX509Cert() public {
@@ -149,3 +162,4 @@ contract X509GenHelper is Test {
         (CERT_BYTES, CERT_BODY_BYTES, MODULUS, CERT_SIG) = abi.decode(response, (bytes, bytes, bytes, bytes));
     }
 }
+

@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Constants used to build commands.
+error="unable to load"
+is_found="./re_find '$error'"
+x509="openssl x509 -text -noout -certopt ca_default -certopt no_validity -certopt no_serial -certopt no_subject -certopt no_extensions -certopt no_signame"
+
+# Check if input is in DER format.
+is_valid_der=$(eval "$x509 -inform DER 2>&1 >/dev/null | $is_found")
+is_valid_der=$([ "$is_valid_der" == "" ] && ./echo "1" || ./echo "0")
+
+# Check if input is in PEM format.
+is_valid_pem=$(eval "$x509 2>&1 >/dev/null | $is_found")
+is_valid_pem=$([ "$is_valid_pem" == "" ] && ./echo "1" || ./echo "0")
+
+# Check if input is a certificate revocation list.
+is_valid_crl=$(eval "openssl crl -text -noout 2>&1 >/dev/null | $is_found")
+is_valid_crl=$([ "$is_valid_crl" == "" ] && ./echo "1" || ./echo "0")
+
+# Debug stuff.
+#echo $is_valid_der
+#echo $is_valid_pem
+#echo $is_valid_crl
+
+# Return true if any are true.
+bool_list=($is_valid_der $is_valid_pem $is_valid_crl)
+for b in ${bool_list[@]}; do
+    if [ "$b" == "1" ]; then
+        ./echo "1"
+        exit
+    fi
+done
+
+./echo "0"

@@ -1,0 +1,38 @@
+#!/usr/bin/python3
+
+import base64, eth_abi, sys, json
+
+data = sys.stdin.buffer.read()
+data = data.decode("utf-8")
+j = json.loads(data)
+names = [
+    "id",
+    "timestamp",
+    "version",
+    "epidPseudonym",
+    "advisoryURL",
+    "advisoryIDs",
+    "isvEnclaveQuoteStatus",
+    "isvEnclaveQuoteBody"
+]
+
+values = []
+for name in names:
+    value = j[name]
+
+    # Script takes decoded body.
+    if name == "isvEnclaveQuoteBody":
+        value = base64.b64decode(value.encode("ascii"))
+    else:
+        # Convert from list and int to str.
+        if not isinstance(value, str):
+            value = json.dumps(value).replace(" ", "")
+
+    # Ensure value is bytes.
+    if isinstance(value, str):
+        value = value.encode("ascii")
+
+    values.append(value)
+
+payload = eth_abi.encode(['bytes'] * len(values), values)
+print(payload.hex(), end="")

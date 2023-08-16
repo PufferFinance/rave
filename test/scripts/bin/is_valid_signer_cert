@@ -1,0 +1,19 @@
+#!/bin/bash
+
+<<comment
+    A signer cert will be valid if its signed by a cert issued by
+    Intels attestation root ca cert.
+    cat intel*pem | openssl x509 -text -noout
+    openssl verify -verbose -CAfile ../../../certs  server.crt
+
+    cat ../../../certs/attestation_report_signer_example.pem | ./is_valid_signer_cert
+
+    stdin: OK
+
+    ln -s ../../../certs certs
+comment
+
+ret=$(openssl verify -verbose -CAfile ../../../certs/intel_attestation_report_root_ca..pem 2> /dev/null)
+ret=$([ "$ret" == "stdin: OK" ] && ./echo "1" || ./echo "0")
+./echo $ret
+

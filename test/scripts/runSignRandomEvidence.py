@@ -1,5 +1,6 @@
 #!/bin/python3
 
+from collections import OrderedDict
 import base64
 import sys
 import json
@@ -32,17 +33,18 @@ def mock_evidence(mrenclave, mrsigner, payload):
     assert payload == bytes(quote_body[PAYLOAD_OFFSET:PAYLOAD_OFFSET+len(payload)])
 
     enc_quote_body = base64.b64encode(quote_body).decode('utf-8')
-
-    evidence = {
-        "id":"142090828149453720542199954221331392599",
-        "timestamp":"2023-02-15T01:24:57.989456",
-        "version":4,
-        "epidPseudonym":"EbrM6X6YCH3brjPXT23gVh/I2EG5sVfHYh+S54fb0rrAqVRTiRTOSfLsWSVTZc8wrazGG7oooGoMU7Gj5TEhsvsDIV4aYpvkSk/E3Tsb7CaGd+Iy1cEhLO4GPwdmwt/PXNQQ3htLdy3aNb7iQMrNbiFcdkVdV/tepdezMsSB8Go=",
-        "advisoryURL":"https://security-center.intel.com",
-        "advisoryIDs":["INTEL-SA-00334","INTEL-SA-00615"],
-        "isvEnclaveQuoteStatus":"OK",
-        "isvEnclaveQuoteBody": f"{enc_quote_body}"
-    }
+    evidence = OrderedDict([
+        ('id', '142090828149453720542199954221331392599'),
+        ('timestamp', "2023-02-15T01:24:57.989456"),
+        ('version', 4),
+        ('epidPseudonym', "EbrM6X6YCH3brjPXT23gVh/I2EG5sVfHYh+S54fb0rrAqVRTiRTOSfLsWSVTZc8wrazGG7oooGoMU7Gj5TEhsvsDIV4aYpvkSk/E3Tsb7CaGd+Iy1cEhLO4GPwdmwt/PXNQQ3htLdy3aNb7iQMrNbiFcdkVdV/tepdezMsSB8Go="),
+        ("advisoryURL", "https://security-center.intel.com"),
+        ("advisoryIDs", ["INTEL-SA-00334","INTEL-SA-00615"]),
+        ("isvEnclaveQuoteStatus", "OK"),
+        ("isvEnclaveQuoteBody", f"{enc_quote_body}"),
+        
+    ])
+    
     return evidence, quote_body
 
 def prepare_values(e: dict, dec_quote_body: bytes) -> bytes:
@@ -88,6 +90,8 @@ def main():
 
     # json -> bytes to sign (ignoring whitespace)
     evidence_bytes = json.dumps(evidence).replace(" ", "").encode('utf-8')
+    with open('/tmp/evidence_b.json', 'wb') as f:
+        f.write(evidence_bytes)
 
     # sign json bytes (send as base64 decoded)
     fname = sys.argv[4]

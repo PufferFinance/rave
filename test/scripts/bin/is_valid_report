@@ -1,0 +1,7 @@
+#!/usr/bin/python3
+
+import re, sys
+
+data = sys.stdin.buffer.read()
+data = data.encode("utf-8")
+print(data)

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Convert reports to a hex list.
+certs=$(./re_find "([-]{2,}BEGIN[ ]+CERTIFICATE[-]{2,}(?:[\s\S]+?)[-]{2,}END[ ]+CERTIFICATE[-]{2,})+" 1)
+
+# Convert cert list to array.
+certs=($certs)
+
+# Get the signer cert (certificate 1)
+cert=${certs[0]}
+
+# Remove escape sequences from certificate.
+cert=$(echo -e $(./echo "$cert" | ./from_hex))
+
+echo -n "$cert"

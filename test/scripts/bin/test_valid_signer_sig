@@ -13,16 +13,8 @@ b64_sig=$(echo $keygen_response | jq -r '.evidence.signed_report')
 report=$(echo $keygen_response | jq -r '.evidence.raw_report')
 
 # Convert reports to a hex list.
-certs=$(echo $keygen_response | jq -r '.evidence.signing_cert' | ./re_find "([-]{2,}BEGIN[ ]+CERTIFICATE[-]{2,}(?:[\s\S]+?)[-]{2,}END[ ]+CERTIFICATE[-]{2,})+" 1)
-
-# Convert cert list to array.
-certs=($certs)
-
-# Get the signer cert (certificate 2)
-cert=${certs[0]}
-
-# Remove escape sequences from certificate.
-cert=$(echo -e $(./echo "$cert" | ./from_hex))
+certs=$(echo $keygen_response | jq -r '.evidence.signing_cert')
+cert=$(echo "$certs" | ./get_report_cert)
 
 # Check its a valid signer cert.
 is_valid=$(echo "$cert" | ./is_valid_signer_cert)
@@ -63,6 +55,7 @@ is already public.
 
 comment
 
+# Extended commands to compare recovered PKCS#1 messages.
 keybits=$(echo "$cert" | ./get_cert_keybits)
 fm=$(openssl rsautl -verify -pubin -inkey "/tmp/$uuid.pubkey" -in "/tmp/$uuid.sig" | ./to_hex)
 xm=$(./echo "$report" | ./rsa_digest $keybits)

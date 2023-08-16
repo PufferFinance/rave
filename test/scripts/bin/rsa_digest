@@ -5,7 +5,6 @@ Generate RSA PKCS#1 encoded messages so they can be used
 to compare to the implementation in X509Verifier.sol.
 """
 
-
 import os, eth_abi, argparse, sys
 import binascii
 import hashlib
@@ -16,27 +15,9 @@ from Crypto.PublicKey import RSA
 from Crypto.Util import number
 from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
 
-
 def get_rsa_pkcs1_padding(msg, mod_bits, include_null=True):
-    # Load RSA key params from PEM private key.
-    #key = RSA.generate(key_bits)
-    """
-    This RSA library forces you to generate an RSA Key
-    to be able to use the padding object. But there's
-    nothing in the padding algorithm that requires
-    that. This is a lazy approach.
-    """
-
     # Hash the message with SHA256.
     h = SHA256.new(msg)
-
-    # Create a padding object. 
-    #pad = pkcs1_15.new(key)
-
-    # See 8.2.1 in RFC 3447.
-    #print(pad._key.n)
-    #modBits = number.size(pad._key.n)
-    #modBits = key_bits
 
     # Convert from bits to bytes.
     k = ceil_div(mod_bits, 8)
@@ -65,10 +46,3 @@ if __name__ == "__main__":
     digest = hashlib.sha256(out).digest()
     digest_hex = binascii.hexlify(digest).decode("utf-8")
     print(out_hex, end="")
-
-
-"""
-13031300d060960864801650304020105000420834be5b42794496d0872cfbe8f172f6fde906c82b8efa49f909c818440f005f6
-13031300d060960864801650304020105000420834be5b42794496d0872cfbe8f172f6fde906c82b8efa49f909c818440f005f6
-
-"""

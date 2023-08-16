@@ -53,9 +53,15 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
         // current incorrectly passing json.
         bytes calldata report,
         bytes memory sig,
+
+        // root ca or report cert?
         bytes memory leafX509Cert,
+
+        // root ca or report cert?
+        // usage seems to indicate intel root ca
         bytes memory signingMod,
         bytes memory signingExp,
+
         bytes32 mrenclave,
         bytes32 mrsigner
     ) public view override returns (bytes memory payload) {

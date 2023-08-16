@@ -27,11 +27,9 @@ parser = argparse.ArgumentParser()
 
 # Output options.
 parser.add_argument('-abi_encode', '--abi_encode')
-parser.add_argument('-get_root', '--get_root')
-parser.add_argument('-get_leaf', '--get_leaf')
 
 # Always required.
-parser.add_argument('-certs', '--certs')
+parser.add_argument('-cert', '--cert')
 
 # Used by abi encode.
 parser.add_argument('-report', '--report')
@@ -44,45 +42,23 @@ parser.add_argument('-mrsigner', '--mrsigner')
 # Args to dict.
 args = vars(parser.parse_args(sys.argv[1:]))
 
-# Unpack certs.
-cert_p = "([-]{2,}BEGIN[ ]+CERTIFICATE[-]{2,}(?:[\s\S]+?)[-]{2,}END[ ]+CERTIFICATE[-]{2,})+"
-certs = from_hex(args["certs"])
-certs = re.findall(cert_p, certs)
-intel_root_cert, leaf_cert = certs
 
-# Intel root certificate output.
-if args["get_root"] is not None:
-    print(repr(intel_root_cert)[1:-1],)
-    exit()
-
-# Leaf certificate output.
-if args["get_leaf"] is not None:
-    print(repr(leaf_cert)[1:-1],)
-    exit()
 
 if args["abi_encode"] is not None:
     # Trucate 0x prefix from args.
     rm_0x(args)
 
-    # Build ABI encoded argument output.
-    leaf_cert_hex = to_hex(leaf_cert)
 
     # 
     unhex_list = [
         args["report"],
         args["sig"],
-        leaf_cert_hex,
+        args["cert"],
         args["sig_mod"],
         args["sig_exp"],
         args["mrenclave"],
         args["mrsigner"]
     ]
-
-    for field in unhex_list:
-        print(" 0x" + field,)
-
-    exit()
-
 
     # Convert hex strings to bytes.
     bytes_list = list_to_b([
@@ -107,10 +83,10 @@ if args["abi_encode"] is not None:
 
     # Add function name to out.
     out = sha3_hex(b"rave(bytes,bytes,bytes,bytes,bytes,bytes32,bytes32)")[:8]
-    # to_s(out) + 
-    out = ffi_payload.hex()
+    out = to_s(out) + ffi_payload.hex()
+    #out = ffi_payload.hex()
 
     # Then dump everything as hex.
-    print(out,)
+    print(out, end="")
 
     

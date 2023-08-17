@@ -1,23 +1,14 @@
 #!/usr/bin/python3
 
 import base64, eth_abi, sys, json
+from lib import *
 
 data = sys.stdin.buffer.read()
 data = data.decode("utf-8")
 j = json.loads(data)
-names = [
-    "id",
-    "timestamp",
-    "version",
-    "epidPseudonym",
-    "advisoryURL",
-    "advisoryIDs",
-    "isvEnclaveQuoteStatus",
-    "isvEnclaveQuoteBody"
-]
 
 values = []
-for name in names:
+for name in REPORT_FIELDS:
     value = j[name]
 
     # Script takes decoded body.

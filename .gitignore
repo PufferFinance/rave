@@ -8,6 +8,7 @@ env/
 .vscode
 test/mocks/evidence.json
 test/scripts/ss_out
+test/scripts/bin/error.log
 *ss_out*
 
 # Byte-compiled / optimized / DLL files

@@ -48,7 +48,6 @@ if args["abi_encode"] is not None:
     # Trucate 0x prefix from args.
     rm_0x(args)
 
-
     # 
     unhex_list = [
         args["report"],
@@ -75,14 +74,14 @@ if args["abi_encode"] is not None:
             "bytes", # Leaf cert
             "bytes", # Sig modulus
             "bytes", # Sig exponent
-            "bytes32", # Mrenclave digest
-            "bytes32", # Mrsigner digest
+            "bytes", # Mrenclave digest
+            "bytes", # Mrsigner digest
         ],
         bytes_list
     )
 
     # Add function name to out.
-    out = sha3_hex(b"rave(bytes,bytes,bytes,bytes,bytes,bytes32,bytes32)")[:8]
+    out = sha3_hex(b"rave(bytes,bytes,bytes,bytes,bytes,bytes,bytes)")[:8]
     out = to_s(out) + ffi_payload.hex()
     #out = ffi_payload.hex()
 

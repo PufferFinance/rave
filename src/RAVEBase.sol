@@ -18,8 +18,8 @@ abstract contract RAVEBase is IRave {
         bytes memory sig,
         bytes memory signingMod,
         bytes memory signingExp,
-        bytes32 mrenclave,
-        bytes32 mrsigner
+        bytes memory mrenclave,
+        bytes memory mrsigner
     ) public view virtual returns (bytes memory payload) { }
 
     /**
@@ -31,7 +31,7 @@ abstract contract RAVEBase is IRave {
         bytes memory leafX509Cert,
         bytes memory signingMod,
         bytes memory signingExp,
-        bytes32 mrenclave,
-        bytes32 mrsigner
+        bytes memory mrenclave,
+        bytes memory mrsigner
     ) external view virtual returns (bytes memory payload) { }
 }

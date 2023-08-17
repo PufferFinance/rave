@@ -28,8 +28,8 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
         bytes memory sig,
         bytes memory signingMod,
         bytes memory signingExp,
-        bytes32 mrenclave,
-        bytes32 mrsigner
+        bytes memory mrenclave,
+        bytes memory mrsigner
     ) public view override returns (bytes memory payload) {
         // Decode the encoded report JSON values to a Values struct and reconstruct the original JSON string
         (Values memory reportValues, bytes memory reportBytes) = _buildReportBytes(reportFieldsABI);
@@ -62,8 +62,8 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
         bytes memory signingMod,
         bytes memory signingExp,
 
-        bytes32 mrenclave,
-        bytes32 mrsigner
+        bytes memory mrenclave,
+        bytes memory mrsigner
     ) public view override returns (bytes memory payload) {
         // Verify the leafX509Cert was signed with signingMod and signingExp
         (bytes memory leafCertModulus, bytes memory leafCertExponent) =
@@ -153,7 +153,7 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
     * @param mrsigner The expected enclave signer.
     * @return The 64 byte payload if the mrenclave and mrsigner values were correctly set.
     */
-    function _verifyReportContents(Values memory reportValues, bytes32 mrenclave, bytes32 mrsigner)
+    function _verifyReportContents(Values memory reportValues, bytes memory mrenclave, bytes memory mrsigner)
         internal
         pure
         returns (bytes memory payload)
@@ -168,11 +168,13 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
 
         // Verify report's MRENCLAVE matches the expected
         bytes32 mre = quoteBody.readBytes32(MRENCLAVE_OFFSET);
-        require(mre == mrenclave);
+        bytes32 mre2 = mrenclave.readBytes32(0);
+        require(mre2 == mre);
 
         // Verify report's MRSIGNER matches the expected
         bytes32 mrs = quoteBody.readBytes32(MRSIGNER_OFFSET);
-        require(mrs == mrsigner);
+        bytes32 mrs2 = mrsigner.readBytes32(0);
+        require(mrs == mrs2);
 
         // Verify report's <= 64B payload matches the expected
         payload = quoteBody.substring(PAYLOAD_OFFSET, PAYLOAD_SIZE);

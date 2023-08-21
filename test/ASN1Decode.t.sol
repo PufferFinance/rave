@@ -35,6 +35,42 @@ contract TestASN1 is Test {
     }
     */
 
+    function testASN1RootOverflowIf() public {
+        vm.expectRevert();
+
+        // High order len bit is set
+        // which triggers else in readNodeLen
+        bytes memory buf = hex"0281";
+        buf.root();
+    }
+
+    function testASN1RootOverflowElseIf() public {
+        vm.expectRevert();
+
+        // High order len bit is not set
+        // which triggers else, if in readNodeLen
+        bytes memory buf = hex"0201";
+        buf.root();
+    }
+
+    function testASN1RootOverflowElseElIf() public {
+        vm.expectRevert();
+
+        // High order len bit is not set
+        // which triggers else, if in readNodeLen
+        bytes memory buf = hex"0202";
+        buf.root();
+    }
+
+    function testASN1RootOverflowElseElse() public {
+        vm.expectRevert();
+
+        // High order len bit is not set
+        // which triggers else, if in readNodeLen
+        bytes memory buf = hex"0203";
+        buf.root();
+    }
+
     function testASN1Uint8Overflow() public {
         vm.expectRevert();
         bytes memory buf = hex"029901";
@@ -54,6 +90,24 @@ contract TestASN1 is Test {
         uint256 rootPtr = x.root();
         uint256 out = x.uintAt(rootPtr);
         console.log(out);
+    }
+
+    function testASN1RootSuccessChances() public {
+        // if, len = 1, buf 1
+        bytes memory a = hex"02010101";
+        a.root();
+
+        // if:if, len 1, buf 1
+        bytes memory b = hex"02810101";
+        b.root();
+
+        // if:elseif, len 1 (2 bytes), buf 1
+        bytes memory c = hex"0282000101";
+        c.root();
+
+        // if:..else var len 1 (3 bytes), buf 1
+        bytes memory d = hex"028300000101";
+        d.root();
     }
 }
 

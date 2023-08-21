@@ -3,6 +3,7 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
+import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 library NodePtr {
     // Unpack first byte index
@@ -190,9 +191,9 @@ library Asn1Decode {
         uint80 ixFirstContentByte = 0;
         uint80 ixLastContentByte = 0;
         if ((der[ix + 1] & 0x80) == 0) {
-            length = uint8(der[ix + 1]);
+            length = Math.max(uint8(der[ix + 1]), 1);
             ixFirstContentByte = uint80(ix + 2);
-            ixLastContentByte = uint80(ixFirstContentByte + length - 1);
+            ixLastContentByte = uint80(ixFirstContentByte + (length - 1));
         } else {
             // How large is the length field?
             uint8 lengthbytesLength = uint8(der[ix + 1] & 0x7F);
@@ -205,20 +206,26 @@ library Asn1Decode {
                 require((der.length - (ix + 2)) >= 2);
                 length = der.readUint16(ix + 2);
             } else {
-                // Ensure enough bytes left.
+                // Ensure enough bytes left for len no.
                 require((der.length - (ix + 2)) >= lengthbytesLength);
+                require(lengthbytesLength <= 32);
+
+                // Read variable length len field.
+                // Shift out the bit length of the length.
+                // Max shift is limited to sizeof length.
+                // But zero is still checked for bellow.
                 length = uint256(der.readBytesN(ix + 2, lengthbytesLength) >> (32 - lengthbytesLength) * 8);
             }
 
             // Content length field must be positive.
             require(length > 0);
             ixFirstContentByte = uint80(ix + 2 + lengthbytesLength);
-            ixLastContentByte = uint80(ixFirstContentByte + length - 1);
+            ixLastContentByte = uint80(ixFirstContentByte + (length - 1));
         }
 
         // Sanity checks for ptrs.
         require(ixFirstContentByte >= 2);
-        require(ixLastContentByte > 2);
+        require(ixLastContentByte >= 2);
 
         // The expected content segment must not overflow.
         require(ixFirstContentByte < der.length);

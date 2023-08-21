@@ -38,6 +38,13 @@ library Asn1Decode {
     * @return A pointer to the outermost node
     */
     function root(bytes memory der) internal pure returns (uint256) {
+        // seq byte (30)
+        // len pt 1 (x)
+        // len pt 2 (optional)
+        // ... contentbytes (1 or more) ...
+        // minimum sanity check
+        // Not the only length check.
+        require(der.length >= 3);
         return readNodeLength(der, 0);
     }
 
@@ -175,25 +182,49 @@ library Asn1Decode {
     }
 
     function readNodeLength(bytes memory der, uint256 ix) private pure returns (uint256) {
-        uint256 length;
-        uint80 ixFirstContentByte;
-        uint80 ixLastContentByte;
+        // Avoid overflow for first len byte.
+        require((ix + 1) < der.length);
+
+        // Read length of a DER segment.
+        uint256 length = 0;
+        uint80 ixFirstContentByte = 0;
+        uint80 ixLastContentByte = 0;
         if ((der[ix + 1] & 0x80) == 0) {
             length = uint8(der[ix + 1]);
             ixFirstContentByte = uint80(ix + 2);
             ixLastContentByte = uint80(ixFirstContentByte + length - 1);
         } else {
+            // How large is the length field?
             uint8 lengthbytesLength = uint8(der[ix + 1] & 0x7F);
+
+            // Avoid overflow.
+            require((ix + 2) < der.length);
             if (lengthbytesLength == 1) {
                 length = der.readUint8(ix + 2);
             } else if (lengthbytesLength == 2) {
+                require((der.length - (ix + 2)) >= 2);
                 length = der.readUint16(ix + 2);
             } else {
+                // Ensure enough bytes left.
+                require((der.length - (ix + 2)) >= lengthbytesLength);
                 length = uint256(der.readBytesN(ix + 2, lengthbytesLength) >> (32 - lengthbytesLength) * 8);
             }
+
+            // Content length field must be positive.
+            require(length > 0);
             ixFirstContentByte = uint80(ix + 2 + lengthbytesLength);
             ixLastContentByte = uint80(ixFirstContentByte + length - 1);
         }
+
+        // Sanity checks for ptrs.
+        require(ixFirstContentByte >= 2);
+        require(ixLastContentByte > 2);
+
+        // The expected content segment must not overflow.
+        require(ixFirstContentByte < der.length);
+        require(ixLastContentByte < der.length);
+
+        // Return the nodeptr structure.
         return NodePtr.getPtr(ix, ixFirstContentByte, ixLastContentByte);
     }
 }

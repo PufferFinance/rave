@@ -22,8 +22,8 @@ abstract contract RAVETester is Test {
         bytes memory sig = m.sig();
         bytes memory signingMod = m.signingMod();
         bytes memory signingExp = m.signingExp();
-        bytes32 mrenclave = m.mrenclave();
-        bytes32 mrsigner = m.mrsigner();
+        bytes memory mrenclave = m.mrenclave();
+        bytes memory mrsigner = m.mrsigner();
         bytes memory payload = m.payload();
         run_verifyRemoteAttestation(report, sig, signingMod, signingExp, mrenclave, mrsigner, payload);
     }
@@ -34,8 +34,8 @@ abstract contract RAVETester is Test {
         bytes memory sig,
         bytes memory signingMod,
         bytes memory signingExp,
-        bytes32 mrenclave,
-        bytes32 mrsigner,
+        bytes memory mrenclave,
+        bytes memory mrsigner,
         bytes memory expPayload
     ) public view {
         bytes memory gotPayload = c.verifyRemoteAttestation(report, sig, signingMod, signingExp, mrenclave, mrsigner);
@@ -46,8 +46,8 @@ abstract contract RAVETester is Test {
         bytes memory report = m.report();
         bytes memory sig = m.sig();
         bytes memory signingCert = m.signingCert();
-        bytes32 mrenclave = m.mrenclave();
-        bytes32 mrsigner = m.mrsigner();
+        bytes memory mrenclave = m.mrenclave();
+        bytes memory mrsigner = m.mrsigner();
         bytes memory payload = m.payload();
         // Intel's root CA modulus
         bytes memory intelRootModulus =
@@ -65,8 +65,8 @@ abstract contract RAVETester is Test {
         bytes memory signingCert,
         bytes memory intelRootModulus,
         bytes memory intelRootExponent,
-        bytes32 mrenclave,
-        bytes32 mrsigner,
+        bytes memory mrenclave,
+        bytes memory mrsigner,
         bytes memory expPayload
     ) public view {
         // Run rave to extract its payload
@@ -127,7 +127,7 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
         return (signature, values);
     }
 
-    function runRAVE(bytes32 mrenclave, bytes32 mrsigner, bytes memory p) public {
+    function runRAVE(bytes memory mrenclave, bytes memory mrsigner, bytes memory p) public {
         vm.assume(p.length >= 64);
 
         // Convert the random bytes into valid utf-8 bytes
@@ -182,8 +182,8 @@ contract RaveInstanceTest is RaveFuzzer {
 
     function test() public {
         return;
-        bytes32 mrenclave = hex"d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f";
-        bytes32 mrsigner = hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
+        bytes memory mrenclave = hex"d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f";
+        bytes memory mrsigner = hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
         bytes memory p =
             hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
 
@@ -197,8 +197,8 @@ contract RaveSanityTester is Test {
     bool useCachedX509s = true;
 
     function testOnSanityCheckedValues() public {
-        bytes32 mrenclave = hex"d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f";
-        bytes32 mrsigner = hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
+        bytes memory mrenclave = hex"d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f";
+        bytes memory mrsigner = hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
         bytes memory p =
             hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
 
@@ -237,7 +237,7 @@ contract RaveFuzzTester is Test {
     }
 
     // Run a fuzz test sequentially on each RAVe parameterization
-    function testRaveFuzz(bytes32 mrenclave, bytes32 mrsigner, bytes memory p) public {
+    function testRaveFuzz(bytes memory mrenclave, bytes memory mrsigner, bytes memory p) public {
         vm.assume(p.length >= 64);
         for (uint256 i = 0; i < numFuzzers; i++) {
             c[i].runRAVE(mrenclave, mrsigner, p);

@@ -40,9 +40,7 @@ library NodePtr {
         return _type_index;
     }
 
-    function overflowCheck(uint256 self, uint len) internal pure {
-        // As len is limited to uint this also limits the max
-        // value of the offets to what can fit in a uint.
+    function overflowCheck(uint256 self, uint256 len) internal pure {
         require(type_index(self) < uint256(len));
         require(content_index(self) < uint256(len));
         require(end_index(self) < uint256(len));

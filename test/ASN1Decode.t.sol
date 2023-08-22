@@ -33,21 +33,117 @@ contract TestASN1 is Test {
         bugCert.firstChildOf(rootPtr);
 
         test read uint, u16, readn overflow.
+
+        todo test: isChildOf
     }
     */
 
-    function testANS1BitStrAtOverflow() public {
+    function testANS1BytesAtOverflow() public {
+        vm.expectRevert();
 
-        return;
+
+        bytes memory buf = hex"020400112233";
+        uint256 ptr = NodePtr.getPtr(0, 200, 200);
+        buf.bytesAt(ptr);
+    }
+
+    function testANS1BytesAtSuccess() public {
+        bytes memory buf = hex"020400112233";
+        uint256 ptr = NodePtr.getPtr(0, 2, 5);
+        buf.bytesAt(ptr);
+    }
+
+    function testANS1AllBytesAtOverflow() public {
+        vm.expectRevert();
+
+        bytes memory buf = hex"020400112233";
+        uint256 ptr = NodePtr.getPtr(0, 200, 200);
+        buf.allBytesAt(ptr);
+    }
+
+    function testANS1AllBytesAtSuccess() public {
+        bytes memory buf = hex"020400112233";
+        uint256 ptr = NodePtr.getPtr(0, 2, 5);
+        buf.allBytesAt(ptr);
+    }
+
+    function testANS1Bytes32AtOverflow() public {
+        vm.expectRevert();
+
+        bytes memory buf = hex"020400112233";
+        uint256 ptr = NodePtr.getPtr(0, 200, 200);
+        buf.bytes32At(ptr);
+    }
+
+    function testANS1Bytes32AtSuccess() public {
+        bytes memory buf = hex"020400112233";
+        uint256 ptr = NodePtr.getPtr(0, 2, 5);
+        buf.bytes32At(ptr);
+    }
+
+    function testANS1UintAtOverflow() public {
+        vm.expectRevert();
+
+        bytes memory buf = hex"020400112233";
+        uint256 ptr = NodePtr.getPtr(0, 200, 200);
+        buf.uintAt(ptr);
+    }
+
+    function testANS1UintAtSuccess() public {
+        bytes memory buf = hex"020400112233";
+        uint256 ptr = NodePtr.getPtr(0, 2, 5);
+        buf.uintAt(ptr);
+    }
+
+    function testANS1UintBytesAtOverflow() public {
+        vm.expectRevert();
+
+        bytes memory buf = hex"020400112233";
+        uint256 ptr = NodePtr.getPtr(0, 200, 200);
+        buf.uintBytesAt(ptr);
+    }
+
+    function testANS1UintBytesAtSuccess() public {
+        bytes memory buf = hex"020400112233";
+        uint256 ptr = NodePtr.getPtr(0, 2, 5);
+        buf.uintBytesAt(ptr);
+    }
+
+    function testANS1KeccakBytesAtOverflow() public {
+        vm.expectRevert();
+
+        bytes memory buf = hex"030400112233";
+        uint256 ptr = NodePtr.getPtr(0, 200, 200);
+        buf.keccakOfBytesAt(ptr);
+    }
+
+    function testANS1KeccakBytesAtSuccess() public {
+        bytes memory buf = hex"030400112233";
+        uint256 ptr = NodePtr.getPtr(0, 2, 5);
+        buf.keccakOfBytesAt(ptr);
+    }
+
+    function testANS1KeccakAllAtOverflow() public {
+        vm.expectRevert();
+
+        bytes memory buf = hex"030400112233";
+        uint256 ptr = NodePtr.getPtr(0, 200, 200);
+        buf.keccakOfAllBytesAt(ptr);
+    }
+
+    function testANS1KeccakAllAtSuccess() public {
+        bytes memory buf = hex"030400112233";
+        uint256 ptr = NodePtr.getPtr(0, 2, 5);
+        buf.keccakOfAllBytesAt(ptr);
+    }
+
+    function testANS1BitStrAtOverflow() public {
+        vm.expectRevert();
 
         // High order len bit is set
         // which triggers else in readNodeLen
         bytes memory buf = hex"030400112233";
-
-        // 000000000000000000000000000000020000000000000005
-        uint256 ptr = 0;
-        ptr = NodePtr.getPtr(0, 200, 200);
-        console.log(ptr.content_index());
+        uint256 ptr = NodePtr.getPtr(0, 200, 200);
         buf.bitstringAt(ptr);
     }
 
@@ -55,11 +151,7 @@ contract TestASN1 is Test {
         // High order len bit is set
         // which triggers else in readNodeLen
         bytes memory buf = hex"030400112233";
-
-        // 000000000000000000000000000000020000000000000005
-        uint256 ptr = 0;
-        ptr = NodePtr.getPtr(0, 2, 5);
-
+        uint256 ptr = NodePtr.getPtr(0, 2, 5);
         buf.bitstringAt(ptr);
     }
 

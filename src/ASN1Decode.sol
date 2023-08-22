@@ -21,11 +21,21 @@ library NodePtr {
         return uint80(self >> 160);
     }
 
+    function content_len(uint256 self) public pure returns (uint256) {
+        return (end_index(self) - content_index(self)) + 1;
+    }
+
     // Pack 3 uint80s into a uint256
     function getPtr(uint256 _type_index, uint256 _content_index, uint256 _end_index) internal pure returns (uint256) {
         _type_index |= _content_index << 80;
         _type_index |= _end_index << 160;
         return _type_index;
+    }
+
+    function overflowCheck(uint256 self, uint len) internal pure {
+        require(type_index(self) < uint256(len));
+        require(content_index(self) < uint256(len));
+        require(end_index(self) < uint256(len));
     }
 }
 
@@ -55,6 +65,7 @@ library Asn1Decode {
     * @return A pointer to the outermost node
     */
     function rootOfBitStringAt(bytes memory der, uint256 ptr) internal pure returns (uint256) {
+        ptr.overflowCheck(der.length);
         require(der[ptr.type_index()] == 0x03, "Not type BIT STRING");
         return readNodeLength(der, ptr.content_index() + 1);
     }
@@ -65,6 +76,7 @@ library Asn1Decode {
     * @return A pointer to the outermost node
     */
     function rootOfOctetStringAt(bytes memory der, uint256 ptr) internal pure returns (uint256) {
+        ptr.overflowCheck(der.length);
         require(der[ptr.type_index()] == 0x04, "Not type OCTET STRING");
         return readNodeLength(der, ptr.content_index());
     }
@@ -76,7 +88,7 @@ library Asn1Decode {
     * @return A pointer to the next sibling node
     */
     function nextSiblingOf(bytes memory der, uint256 ptr) internal pure returns (uint256) {
-        require(ptr < der.length);
+        ptr.overflowCheck(der.length);
         return readNodeLength(der, ptr.end_index() + 1);
     }
 
@@ -87,8 +99,7 @@ library Asn1Decode {
     * @return A pointer to the first child node
     */
     function firstChildOf(bytes memory der, uint256 ptr) internal pure returns (uint256) {
-        require(ptr.type_index() < der.length);
-        require(ptr.content_index() < der.length);
+        ptr.overflowCheck(der.length);
         require(der[ptr.type_index()] & 0x20 == 0x20, "Not a constructed type");
         return readNodeLength(der, ptr.content_index());
     }
@@ -119,7 +130,8 @@ library Asn1Decode {
     * @return Value bytes of node
     */
     function bytesAt(bytes memory der, uint256 ptr) internal pure returns (bytes memory) {
-        return der.substring(ptr.content_index(), ptr.end_index() + 1 - ptr.content_index());
+        ptr.overflowCheck(der.length);
+        return der.substring(ptr.content_index(), ptr.content_len());
     }
 
     /*
@@ -129,7 +141,8 @@ library Asn1Decode {
     * @return All bytes of node
     */
     function allBytesAt(bytes memory der, uint256 ptr) internal pure returns (bytes memory) {
-        return der.substring(ptr.type_index(), ptr.end_index() + 1 - ptr.type_index());
+        ptr.overflowCheck(der.length);
+        return der.substring(ptr.type_index(), ptr.content_len());
     }
 
     /*
@@ -139,7 +152,9 @@ library Asn1Decode {
     * @return Value bytes of node as bytes32
     */
     function bytes32At(bytes memory der, uint256 ptr) internal pure returns (bytes32) {
-        return der.readBytesN(ptr.content_index(), ptr.end_index() + 1 - ptr.content_index());
+        ptr.overflowCheck(der.length);
+        require(ptr.content_len() <= 32);
+        return der.readBytesN(ptr.content_index(), ptr.content_len());
     }
 
     /*
@@ -149,10 +164,16 @@ library Asn1Decode {
     * @return Uint value of node
     */
     function uintAt(bytes memory der, uint256 ptr) internal pure returns (uint256) {
+        ptr.overflowCheck(der.length);
         require(der[ptr.type_index()] == 0x02, "Not type INTEGER");
         require(der[ptr.content_index()] & 0x80 == 0, "Not positive");
-        uint256 len = ptr.end_index() + 1 - ptr.content_index();
-        return uint256(der.readBytesN(ptr.content_index(), len) >> (32 - len) * 8);
+        uint256 len = ptr.content_len();
+
+        require(len <= 32);
+        return uint256(
+            der.readBytesN(ptr.content_index(), len) >> 
+            ((32 - len) * 8)
+        );
     }
 
     /*
@@ -162,9 +183,13 @@ library Asn1Decode {
     * @return Value bytes of a positive integer node
     */
     function uintBytesAt(bytes memory der, uint256 ptr) internal pure returns (bytes memory) {
+        ptr.overflowCheck(der.length);
         require(der[ptr.type_index()] == 0x02, "Not type INTEGER");
         require(der[ptr.content_index()] & 0x80 == 0, "Not positive");
-        uint256 valueLength = ptr.end_index() + 1 - ptr.content_index();
+        uint256 valueLength = ptr.content_len();
+        return der.substring(ptr.content_index(), ptr.content_len());
+
+        // This seems invalid.
         if (der[ptr.content_index()] == 0) {
             return der.substring(ptr.content_index() + 1, valueLength - 1);
         } else {
@@ -173,11 +198,13 @@ library Asn1Decode {
     }
 
     function keccakOfBytesAt(bytes memory der, uint256 ptr) internal pure returns (bytes32) {
-        return der.keccak(ptr.content_index(), ptr.end_index() + 1 - ptr.content_index());
+        ptr.overflowCheck(der.length);
+        return der.keccak(ptr.content_index(), ptr.content_len());
     }
 
     function keccakOfAllBytesAt(bytes memory der, uint256 ptr) internal pure returns (bytes32) {
-        return der.keccak(ptr.type_index(), ptr.end_index() + 1 - ptr.type_index());
+        ptr.overflowCheck(der.length);
+        return der.keccak(ptr.type_index(), ptr.content_len());
     }
 
     /*
@@ -187,12 +214,18 @@ library Asn1Decode {
     * @return Value of bitstring converted to bytes
     */
     function bitstringAt(bytes memory der, uint256 ptr) internal pure returns (bytes memory) {
+        ptr.overflowCheck(der.length);
+
+        // Check type is bitstring.
         require(der[ptr.type_index()] == 0x03, "Not type BIT STRING");
         // Only 00 padded bitstr can be converted to bytestr!
         require(der[ptr.content_index()] == 0x00);
+
+        // Return the segment and avoid overflows.
         uint256 valueLength = ptr.end_index() + 1 - ptr.content_index();
-
-
+        require(valueLength > 0);
+        require(ptr.content_index() + 1 < der.length);
+        require(valueLength - 1 < der.length);
         return der.substring(ptr.content_index() + 1, valueLength - 1);
     }
 

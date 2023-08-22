@@ -94,7 +94,9 @@ library Asn1Decode {
     */
     function nextSiblingOf(bytes memory der, uint256 ptr) internal pure returns (uint256) {
         ptr.overflowCheck(der.length);
-        return readNodeLength(der, ptr.end_index() + 1);
+        uint256 index = (ptr.end_index() + 1);
+        require(index < der.length);
+        return readNodeLength(der, index);
     }
 
     /*

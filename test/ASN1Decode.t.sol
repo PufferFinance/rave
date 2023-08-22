@@ -33,10 +33,36 @@ contract TestASN1 is Test {
         bugCert.firstChildOf(rootPtr);
 
         test read uint, u16, readn overflow.
-
-        todo test: isChildOf, nextSiblingOf, firstChildOf
     }
     */
+
+    function testANS1NextSiblingOfOverflow() public {
+        vm.expectRevert();
+
+        bytes memory buf = hex"030400112233030400112233";
+        uint256 ptr = NodePtr.getPtr(0, 2, 200);
+        buf.nextSiblingOf(ptr);
+    }
+
+    function testANS1NextSiblingOfSuccess() public {
+        bytes memory buf = hex"030400112233030400112233";
+        uint256 ptr = NodePtr.getPtr(0, 2, 5);
+        buf.nextSiblingOf(ptr);
+    }
+
+    function testANS1FirstChildOfOverflow() public {
+        vm.expectRevert();
+
+        bytes memory buf = hex"00000000200402020133";
+        uint256 ptr = NodePtr.getPtr(4, 200, 5);
+        buf.firstChildOf(ptr);
+    }
+
+    function testANS1FirstChildOfSuccess() public {
+        bytes memory buf = hex"00000000200402020133";
+        uint256 ptr = NodePtr.getPtr(4, 2, 5);
+        buf.firstChildOf(ptr);
+    }
 
     function testANS1RootOctetStringAtOverflow() public {
         vm.expectRevert();

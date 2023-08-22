@@ -248,6 +248,9 @@ library Asn1Decode {
         // Avoid overflow for first len byte.
         require((ix + 1) < der.length);
 
+        // Reject multi-byte identifiers.
+        require((der[ix] & 0x1F) != 0x1F);
+
         // Read length of a DER segment.
         uint256 length = 0;
         uint80 ixFirstContentByte = 0;

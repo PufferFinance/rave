@@ -283,6 +283,14 @@ contract TestASN1 is Test {
         bytes memory d = hex"028300000101";
         d.root();
     }
+
+    function testASN1RejectMultibyteTags() public {
+        vm.expectRevert();
+
+        bytes memory a = hex"1F020102";
+        //uint256 ptr = NodePtr.getPtr(0, 2, 3);
+        a.root();
+    }
 }
 
 /*

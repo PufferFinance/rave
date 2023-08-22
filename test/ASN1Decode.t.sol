@@ -34,13 +34,41 @@ contract TestASN1 is Test {
 
         test read uint, u16, readn overflow.
 
-        todo test: isChildOf
+        todo test: isChildOf, nextSiblingOf, firstChildOf
     }
     */
 
-    function testANS1BytesAtOverflow() public {
+    function testANS1RootOctetStringAtOverflow() public {
         vm.expectRevert();
 
+        bytes memory buf = hex"040402990133";
+        uint256 ptr = NodePtr.getPtr(0, 2, 5);
+        buf.rootOfOctetStringAt(ptr);
+    }
+
+    function testANS1RootOctetStringAtSuccess() public {
+        bytes memory buf = hex"040402020133";
+        uint256 ptr = NodePtr.getPtr(0, 2, 5);
+        buf.rootOfOctetStringAt(ptr);
+    }
+
+    function testANS1RootOfBitStringAtOverflow() public {
+        vm.expectRevert();
+
+        // len -> 3 -> +1 = len ->     4
+        bytes memory buf = hex"030400009933";
+        uint256 ptr = NodePtr.getPtr(0, 2, 5);
+        buf.rootOfBitStringAt(ptr);
+    }
+
+    function testANS1RootOfBitStringAtSuccess() public {
+        bytes memory buf = hex"030402020133";
+        uint256 ptr = NodePtr.getPtr(0, 2, 5);
+        buf.rootOfBitStringAt(ptr);
+    }
+
+    function testANS1BytesAtOverflow() public {
+        vm.expectRevert();
 
         bytes memory buf = hex"020400112233";
         uint256 ptr = NodePtr.getPtr(0, 200, 200);

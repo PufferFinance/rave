@@ -67,7 +67,12 @@ library Asn1Decode {
     function rootOfBitStringAt(bytes memory der, uint256 ptr) internal pure returns (uint256) {
         ptr.overflowCheck(der.length);
         require(der[ptr.type_index()] == 0x03, "Not type BIT STRING");
-        return readNodeLength(der, ptr.content_index() + 1);
+
+        // Not sure if the '+1' is right but overflow is checked for.
+        uint256 len = ptr.content_index() + 1;
+        require(len < der.length);
+
+        return readNodeLength(der, len);
     }
 
     /*

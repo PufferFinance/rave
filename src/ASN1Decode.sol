@@ -6,6 +6,8 @@ import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 library NodePtr {
+    uint80 constant MAX_UNIT80 = 1208925819614629174706175;
+
     // Unpack first byte index
     function type_index(uint256 self) internal pure returns (uint256) {
         return uint80(self);
@@ -27,12 +29,20 @@ library NodePtr {
 
     // Pack 3 uint80s into a uint256
     function getPtr(uint256 _type_index, uint256 _content_index, uint256 _end_index) internal pure returns (uint256) {
+        // This prevents overflowing the individual bit fields.
+        require(_type_index <= MAX_UNIT80);
+        require(_content_index <= MAX_UNIT80);
+        require(_end_index <= MAX_UNIT80);
+
+        // Bit shift fields into correct segements.
         _type_index |= _content_index << 80;
         _type_index |= _end_index << 160;
         return _type_index;
     }
 
     function overflowCheck(uint256 self, uint len) internal pure {
+        // As len is limited to uint this also limits the max
+        // value of the offets to what can fit in a uint.
         require(type_index(self) < uint256(len));
         require(content_index(self) < uint256(len));
         require(end_index(self) < uint256(len));

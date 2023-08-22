@@ -7,25 +7,25 @@ import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 library NodePtr {
     // Unpack first byte index
-    function ixs(uint256 self) internal pure returns (uint256) {
+    function type_index(uint256 self) internal pure returns (uint256) {
         return uint80(self);
     }
-    // Unpack first content byte index
 
-    function ixf(uint256 self) internal pure returns (uint256) {
+    // Unpack first content byte index
+    function content_index(uint256 self) internal pure returns (uint256) {
         return uint80(self >> 80);
     }
-    // Unpack last content byte index
 
-    function ixl(uint256 self) internal pure returns (uint256) {
+    // Unpack last content byte index
+    function end_index(uint256 self) internal pure returns (uint256) {
         return uint80(self >> 160);
     }
-    // Pack 3 uint80s into a uint256
 
-    function getPtr(uint256 _ixs, uint256 _ixf, uint256 _ixl) internal pure returns (uint256) {
-        _ixs |= _ixf << 80;
-        _ixs |= _ixl << 160;
-        return _ixs;
+    // Pack 3 uint80s into a uint256
+    function getPtr(uint256 _type_index, uint256 _content_index, uint256 _end_index) internal pure returns (uint256) {
+        _type_index |= _content_index << 80;
+        _type_index |= _end_index << 160;
+        return _type_index;
     }
 }
 
@@ -55,8 +55,8 @@ library Asn1Decode {
     * @return A pointer to the outermost node
     */
     function rootOfBitStringAt(bytes memory der, uint256 ptr) internal pure returns (uint256) {
-        require(der[ptr.ixs()] == 0x03, "Not type BIT STRING");
-        return readNodeLength(der, ptr.ixf() + 1);
+        require(der[ptr.type_index()] == 0x03, "Not type BIT STRING");
+        return readNodeLength(der, ptr.content_index() + 1);
     }
 
     /*
@@ -65,8 +65,8 @@ library Asn1Decode {
     * @return A pointer to the outermost node
     */
     function rootOfOctetStringAt(bytes memory der, uint256 ptr) internal pure returns (uint256) {
-        require(der[ptr.ixs()] == 0x04, "Not type OCTET STRING");
-        return readNodeLength(der, ptr.ixf());
+        require(der[ptr.type_index()] == 0x04, "Not type OCTET STRING");
+        return readNodeLength(der, ptr.content_index());
     }
 
     /*
@@ -76,7 +76,8 @@ library Asn1Decode {
     * @return A pointer to the next sibling node
     */
     function nextSiblingOf(bytes memory der, uint256 ptr) internal pure returns (uint256) {
-        return readNodeLength(der, ptr.ixl() + 1);
+        require(ptr < der.length);
+        return readNodeLength(der, ptr.end_index() + 1);
     }
 
     /*
@@ -86,8 +87,10 @@ library Asn1Decode {
     * @return A pointer to the first child node
     */
     function firstChildOf(bytes memory der, uint256 ptr) internal pure returns (uint256) {
-        require(der[ptr.ixs()] & 0x20 == 0x20, "Not a constructed type");
-        return readNodeLength(der, ptr.ixf());
+        require(ptr.type_index() < der.length);
+        require(ptr.content_index() < der.length);
+        require(der[ptr.type_index()] & 0x20 == 0x20, "Not a constructed type");
+        return readNodeLength(der, ptr.content_index());
     }
 
     /*
@@ -97,7 +100,16 @@ library Asn1Decode {
     * @return True iff j is child of i or i is child of j.
     */
     function isChildOf(uint256 i, uint256 j) internal pure returns (bool) {
-        return (((i.ixf() <= j.ixs()) && (j.ixl() <= i.ixl())) || ((j.ixf() <= i.ixs()) && (i.ixl() <= j.ixl())));
+        return (
+            (
+                (i.content_index() <= j.type_index()) && 
+                (j.end_index() <= i.end_index())
+            ) || 
+            (
+                (j.content_index() <= i.type_index()) &&
+                (i.end_index() <= j.end_index())
+            )
+        );
     }
 
     /*
@@ -107,7 +119,7 @@ library Asn1Decode {
     * @return Value bytes of node
     */
     function bytesAt(bytes memory der, uint256 ptr) internal pure returns (bytes memory) {
-        return der.substring(ptr.ixf(), ptr.ixl() + 1 - ptr.ixf());
+        return der.substring(ptr.content_index(), ptr.end_index() + 1 - ptr.content_index());
     }
 
     /*
@@ -117,7 +129,7 @@ library Asn1Decode {
     * @return All bytes of node
     */
     function allBytesAt(bytes memory der, uint256 ptr) internal pure returns (bytes memory) {
-        return der.substring(ptr.ixs(), ptr.ixl() + 1 - ptr.ixs());
+        return der.substring(ptr.type_index(), ptr.end_index() + 1 - ptr.type_index());
     }
 
     /*
@@ -127,7 +139,7 @@ library Asn1Decode {
     * @return Value bytes of node as bytes32
     */
     function bytes32At(bytes memory der, uint256 ptr) internal pure returns (bytes32) {
-        return der.readBytesN(ptr.ixf(), ptr.ixl() + 1 - ptr.ixf());
+        return der.readBytesN(ptr.content_index(), ptr.end_index() + 1 - ptr.content_index());
     }
 
     /*
@@ -137,10 +149,10 @@ library Asn1Decode {
     * @return Uint value of node
     */
     function uintAt(bytes memory der, uint256 ptr) internal pure returns (uint256) {
-        require(der[ptr.ixs()] == 0x02, "Not type INTEGER");
-        require(der[ptr.ixf()] & 0x80 == 0, "Not positive");
-        uint256 len = ptr.ixl() + 1 - ptr.ixf();
-        return uint256(der.readBytesN(ptr.ixf(), len) >> (32 - len) * 8);
+        require(der[ptr.type_index()] == 0x02, "Not type INTEGER");
+        require(der[ptr.content_index()] & 0x80 == 0, "Not positive");
+        uint256 len = ptr.end_index() + 1 - ptr.content_index();
+        return uint256(der.readBytesN(ptr.content_index(), len) >> (32 - len) * 8);
     }
 
     /*
@@ -150,22 +162,22 @@ library Asn1Decode {
     * @return Value bytes of a positive integer node
     */
     function uintBytesAt(bytes memory der, uint256 ptr) internal pure returns (bytes memory) {
-        require(der[ptr.ixs()] == 0x02, "Not type INTEGER");
-        require(der[ptr.ixf()] & 0x80 == 0, "Not positive");
-        uint256 valueLength = ptr.ixl() + 1 - ptr.ixf();
-        if (der[ptr.ixf()] == 0) {
-            return der.substring(ptr.ixf() + 1, valueLength - 1);
+        require(der[ptr.type_index()] == 0x02, "Not type INTEGER");
+        require(der[ptr.content_index()] & 0x80 == 0, "Not positive");
+        uint256 valueLength = ptr.end_index() + 1 - ptr.content_index();
+        if (der[ptr.content_index()] == 0) {
+            return der.substring(ptr.content_index() + 1, valueLength - 1);
         } else {
-            return der.substring(ptr.ixf(), valueLength);
+            return der.substring(ptr.content_index(), valueLength);
         }
     }
 
     function keccakOfBytesAt(bytes memory der, uint256 ptr) internal pure returns (bytes32) {
-        return der.keccak(ptr.ixf(), ptr.ixl() + 1 - ptr.ixf());
+        return der.keccak(ptr.content_index(), ptr.end_index() + 1 - ptr.content_index());
     }
 
     function keccakOfAllBytesAt(bytes memory der, uint256 ptr) internal pure returns (bytes32) {
-        return der.keccak(ptr.ixs(), ptr.ixl() + 1 - ptr.ixs());
+        return der.keccak(ptr.type_index(), ptr.end_index() + 1 - ptr.type_index());
     }
 
     /*
@@ -175,11 +187,13 @@ library Asn1Decode {
     * @return Value of bitstring converted to bytes
     */
     function bitstringAt(bytes memory der, uint256 ptr) internal pure returns (bytes memory) {
-        require(der[ptr.ixs()] == 0x03, "Not type BIT STRING");
+        require(der[ptr.type_index()] == 0x03, "Not type BIT STRING");
         // Only 00 padded bitstr can be converted to bytestr!
-        require(der[ptr.ixf()] == 0x00);
-        uint256 valueLength = ptr.ixl() + 1 - ptr.ixf();
-        return der.substring(ptr.ixf() + 1, valueLength - 1);
+        require(der[ptr.content_index()] == 0x00);
+        uint256 valueLength = ptr.end_index() + 1 - ptr.content_index();
+
+
+        return der.substring(ptr.content_index() + 1, valueLength - 1);
     }
 
     function readNodeLength(bytes memory der, uint256 ix) private pure returns (uint256) {

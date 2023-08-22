@@ -217,7 +217,7 @@ contract X509Verifier is Test {
         uint256 ptr = cert.firstChildOf(tbsPtr);
 
         // Account for v1 vs v3
-        if (cert[NodePtr.ixs(ptr)] == 0xa0) {
+        if (cert[NodePtr.type_index(ptr)] == 0xa0) {
             ptr = cert.nextSiblingOf(ptr);
         }
 

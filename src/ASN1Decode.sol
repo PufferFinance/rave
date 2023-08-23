@@ -99,7 +99,7 @@ library Asn1Decode {
     function rootOfOctetStringAt(bytes memory der, uint256 ptr) internal pure returns (uint256) {
         ptr.overflowCheck(der.length);
         require(der[ptr.type_index()] == 0x04, "Not type OCTET STRING");
-        return readNodeLength(der, ptr.content_index());
+        return readNodeLength(der, ptr.content_index() + 1);
     }
 
     /*
@@ -176,7 +176,8 @@ library Asn1Decode {
     function allBytesAt(bytes memory der, uint256 ptr) internal pure returns (bytes memory) {
         ptr.overflowCheck(der.length);
         if(ptr.content_len() >= 1) {
-            return der.substring(ptr.type_index(), ptr.content_len());
+            uint256 len = (ptr.end_index() - ptr.type_index()) + 1;
+            return der.substring(ptr.type_index(), len);
         }
         revert();
     }
@@ -269,7 +270,8 @@ library Asn1Decode {
     function keccakOfAllBytesAt(bytes memory der, uint256 ptr) internal pure returns (bytes32) {
         ptr.overflowCheck(der.length);
         if(ptr.content_len() >= 1) {
-            return der.keccak(ptr.type_index(), (ptr.end_index() - ptr.type_index()) + 1);
+            uint256 len = (ptr.end_index() - ptr.type_index()) + 1;
+            return der.keccak(ptr.type_index(), len);
         }
         revert();
     }

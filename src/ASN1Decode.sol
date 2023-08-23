@@ -269,7 +269,7 @@ library Asn1Decode {
     function keccakOfAllBytesAt(bytes memory der, uint256 ptr) internal pure returns (bytes32) {
         ptr.overflowCheck(der.length);
         if(ptr.content_len() >= 1) {
-            return der.keccak(ptr.type_index(), ptr.content_len());
+            return der.keccak(ptr.type_index(), (ptr.end_index() - ptr.type_index()) + 1);
         }
         revert();
     }

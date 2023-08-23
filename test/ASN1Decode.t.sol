@@ -132,7 +132,9 @@ contract TestASN1 is Test {
     function testANS1Bytes32AtSuccess() public {
         bytes memory buf = hex"020400112233";
         uint256 ptr = NodePtr.getPtr(0, 2, 5);
-        buf.bytes32At(ptr);
+        bytes32 out = buf.bytes32At(ptr);
+        bytes32 expect = hex"00112233";
+        assert(out == expect);
     }
 
     function testANS1UintAtOverflow() public {
@@ -146,7 +148,9 @@ contract TestASN1 is Test {
     function testANS1UintAtSuccess() public {
         bytes memory buf = hex"020400112233";
         uint256 ptr = NodePtr.getPtr(0, 2, 5);
-        buf.uintAt(ptr);
+        uint256 out = buf.uintAt(ptr);
+        uint256 expect = 1122867;
+        assert(out == expect);
     }
 
     function testANS1UintBytesAtOverflow() public {
@@ -160,7 +164,9 @@ contract TestASN1 is Test {
     function testANS1UintBytesAtSuccess() public {
         bytes memory buf = hex"020400112233";
         uint256 ptr = NodePtr.getPtr(0, 2, 5);
-        buf.uintBytesAt(ptr);
+        bytes memory out = buf.uintBytesAt(ptr);
+        bytes memory expect = hex"00112233";
+        assert(keccak256(out) == keccak256(expect));
     }
 
     function testANS1KeccakBytesAtOverflow() public {
@@ -174,7 +180,9 @@ contract TestASN1 is Test {
     function testANS1KeccakBytesAtSuccess() public {
         bytes memory buf = hex"030400112233";
         uint256 ptr = NodePtr.getPtr(0, 2, 5);
-        buf.keccakOfBytesAt(ptr);
+        bytes32 out = buf.keccakOfBytesAt(ptr);
+        bytes memory expect = hex"00112233";
+        assert(out == keccak256(expect));
     }
 
     function testANS1KeccakAllAtOverflow() public {
@@ -188,7 +196,8 @@ contract TestASN1 is Test {
     function testANS1KeccakAllAtSuccess() public {
         bytes memory buf = hex"030400112233";
         uint256 ptr = NodePtr.getPtr(0, 2, 5);
-        buf.keccakOfAllBytesAt(ptr);
+        bytes32 out = buf.keccakOfAllBytesAt(ptr);
+        assert(out == keccak256(buf));
     }
 
     function testANS1BitStrAtOverflow() public {
@@ -206,7 +215,11 @@ contract TestASN1 is Test {
         // which triggers else in readNodeLen
         bytes memory buf = hex"030400112233";
         uint256 ptr = NodePtr.getPtr(0, 2, 5);
-        buf.bitstringAt(ptr);
+
+        // It does the weird padded bitstrings.
+        bytes memory out = buf.bitstringAt(ptr);
+        bytes memory expect = hex"112233";
+        assert(keccak256(out) == keccak256(expect));
     }
 
     function testASN1RootOverflowIf() public {

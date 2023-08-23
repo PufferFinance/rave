@@ -187,7 +187,6 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
     }
 }
 
-/*
 contract Test512BitCertChain is TestCertChainVerification {
     constructor() X509GenHelper("512") { }
 }
@@ -195,13 +194,13 @@ contract Test512BitCertChain is TestCertChainVerification {
 contract Test1024BitCertChain is TestCertChainVerification {
     constructor() X509GenHelper("1024") { }
 }
-*/
+
 
 contract Test2048BitCertChain is TestCertChainVerification {
     constructor() X509GenHelper("2048") { }
 }
 
-/*
+
 contract Test3072BitCertChain is TestCertChainVerification {
     constructor() X509GenHelper("3072") { }
 }
@@ -209,4 +208,3 @@ contract Test3072BitCertChain is TestCertChainVerification {
 contract Test4096BitCertChain is TestCertChainVerification {
     constructor() X509GenHelper("4096") { }
 }
-*/

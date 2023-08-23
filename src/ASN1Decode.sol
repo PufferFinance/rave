@@ -347,7 +347,7 @@ type, (opt type) (len or len flag) (opt len ... N) (opt buf .. N)
             if(length >= 1)
             {
                 ixFirstContentByte = uint80(ix + 2);
-                ixLastContentByte = uint80(ixFirstContentByte + length - 1);
+                ixLastContentByte += uint80(length);
             }
         } else {
             // How large is the length field?
@@ -377,7 +377,7 @@ type, (opt type) (len or len flag) (opt len ... N) (opt buf .. N)
             if(length >= 1)
             {
                 ixFirstContentByte = uint80(ix + 2 + lengthbytesLength);
-                ixLastContentByte = uint80(ixFirstContentByte + length - 1);
+                ixLastContentByte += uint80(length);
             }
         }
 

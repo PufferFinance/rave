@@ -29,48 +29,24 @@ contract TestASN1 is Test {
     function testASN1CertTraversial() public {
         // Pointer to top level asn1 object: Sequence{tbsCertificate, signatureAlgorithm, signatureValue}
         uint256 root = cert.root();
-        console.log(root.type_index());
-        console.log(root.content_index());
-        console.log(root.end_index());
-        console.log(root.content_len());
- 
 
         // Traverse to first in sequence (the tbsCertificate)
         uint256 tbsPtr = cert.firstChildOf(root);
-        console.log(tbsPtr.content_len());
-        console.log(tbsPtr.type_index());
-        console.log(tbsPtr.content_index());
-        console.log(tbsPtr.end_index());
-        console.log(tbsPtr.content_len());
-
-
 
         // Extracts the TBSCerificate (what is used as input to RSA-SHA256)
         bytes memory certBody = cert.allBytesAt(tbsPtr);
         //console.log(tbsPtr.content_len());
 
-
-
         // Top level traverse to signatureAlgorithm
         uint256 sigAlgPtr = cert.nextSiblingOf(tbsPtr);
-        console.log(sigAlgPtr.type_index());
-        console.log(sigAlgPtr.content_index());
-        console.log(sigAlgPtr.end_index());
-        console.log(sigAlgPtr.content_len());
-
 
         // Top level traverse to signatureValue
         uint256 sigPtr = cert.nextSiblingOf(sigAlgPtr);
-        console.log(sigPtr.type_index());
-        console.log(sigPtr.content_index());
-        console.log(sigPtr.end_index());
-        console.log(sigPtr.content_len());
 
         // Extracts the signed certificate body
         bytes memory signature = cert.bytesAt(sigPtr);
 
         require(Certs.verifyChildCert(certBody, signature, intelRootModulus, intelRootExponent), "verifyChildCert fail");
-
     }
 
     /*

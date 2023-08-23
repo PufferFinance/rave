@@ -353,7 +353,6 @@ type, (opt type) (len or len flag) (opt len ... N) (opt buf .. N)
             // How large is the length field?
             uint8 lengthbytesLength = uint8(der[ix + 1] & 0x7F);
 
-
             // Avoid overflow.
             require((ix + 2 + lengthbytesLength) < der.length);
             if (lengthbytesLength == 1) {
@@ -374,7 +373,7 @@ type, (opt type) (len or len flag) (opt len ... N) (opt buf .. N)
             }
 
             // Content length field must be positive.
-            ixLastContentByte += uint80(lengthbytesLength) + 1;
+            ixLastContentByte += uint80(lengthbytesLength);
             if(length >= 1)
             {
                 ixFirstContentByte = uint80(ix + 2 + lengthbytesLength);

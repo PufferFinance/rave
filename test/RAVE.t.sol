@@ -6,7 +6,7 @@ import { RAVE } from "rave/RAVE.sol";
 
 import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 import { MockEvidence, ValidBLSEvidence } from "test/mocks/MockEvidence.sol";
-import { X509GenHelper, BytesFFIFuzzer } from "test/utils/helper.sol";
+import { X509GenHelper, BytesFFIFuzzer, BytesHelper } from "test/utils/helper.sol";
 import { Test, console } from "forge-std/Test.sol";
 
 
@@ -102,7 +102,7 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
         c = new RAVE();
     }
 
-    function genNewEvidence(string memory mrenclave, string memory mrsigner, string memory payload)
+    function genNewEvidence(bytes memory mrenclave, bytes memory mrsigner, bytes memory payload)
         public
         returns (bytes memory, bytes memory)
     {
@@ -112,9 +112,9 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
         string[] memory cmds = new string[](6);
         cmds[0] = "python3";
         cmds[1] = "test/scripts/runSignRandomEvidence.py";
-        cmds[2] = mrenclave;
-        cmds[3] = mrsigner;
-        cmds[4] = payload;
+        cmds[2] = BytesHelper.toHexString(mrenclave);
+        cmds[3] = BytesHelper.toHexString(mrsigner);
+        cmds[4] = BytesHelper.toHexString(payload);
         cmds[5] = X509_PRIV_KEY_NAME;
 
         // Request .py sript to generate and sign mock RA evidence
@@ -133,11 +133,11 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
 
         // Convert the random bytes into valid utf-8 bytes
         bytes memory payload = getFriendlyBytes(p).substring(0, 130);
-        console.log(string(payload));
+
 
         // Request new RA evidence
         (bytes memory signature, bytes memory reportValues) =
-            genNewEvidence(vm.toString(mrenclave), vm.toString(mrsigner), string(payload));
+            genNewEvidence(mrenclave, mrsigner, payload);
 
         // Run rave to extract its payload
         bytes memory gotPayload = c.rave(reportValues, signature, CERT_BYTES, MODULUS, EXPONENT, mrenclave, mrsigner);
@@ -176,13 +176,12 @@ contract CacheTheX509s is Test {
 // Test a single FuzzTest instance on one known input
 contract RaveInstanceTest is RaveFuzzer {
     // Manually adjust the parameters
-    string constant keyBits = "3072";
+    string constant keyBits = "2048";
     bool constant useCachedX509s = true;
 
     constructor() RaveFuzzer(keyBits, useCachedX509s) { }
 
     function test() public {
-        return;
         bytes memory mrenclave = hex"d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f";
         bytes memory mrsigner = hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
         bytes memory p =
@@ -203,7 +202,7 @@ contract RaveSanityTester is Test {
         bytes memory p =
             hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
 
-        string[1] memory rsaKeySize = ["4096"];
+        string[1] memory rsaKeySize = ["2048"];
 
         for (uint256 i = 0; i < rsaKeySize.length; i++) {
             string memory _rsaKeySize = rsaKeySize[i];

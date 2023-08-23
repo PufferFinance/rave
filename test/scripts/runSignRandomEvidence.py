@@ -10,6 +10,8 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
 import eth_abi
 
+from utils import *
+
 MRENCLAVE_OFFSET = 112
 MRSIGNER_OFFSET = 176
 PAYLOAD_OFFSET = 368
@@ -75,15 +77,12 @@ def sign(fname, message) -> bytes:
 
 def main():
     # Prepare inputs
-    stripped_mre = sys.argv[1].removeprefix('0x')
-    stripped_mrs = sys.argv[2].removeprefix('0x')
-    stripped_payload = sys.argv[3].removeprefix('0x')
-    mrenclave = '0' * (64 - len(stripped_mre)) + stripped_mre
-    mrsigner = '0' * (64 - len(stripped_mrs)) + stripped_mrs
-    payload = '0' * (128 - len(stripped_payload)) + stripped_payload
-    mrenclave = bytes.fromhex(mrenclave)
-    mrsigner = bytes.fromhex(mrsigner)
-    payload = bytes.fromhex(payload)
+    stripped_mre = strip_0x(sys.argv[1])
+    stripped_mrs = strip_0x(sys.argv[2])
+    stripped_payload = strip_0x(sys.argv[3])
+    mrenclave = from_hex(stripped_mre)
+    mrsigner = from_hex(stripped_mrs)
+    payload = from_hex(stripped_payload)
 
     # mock json report
     evidence, dec_quote_body = mock_evidence(mrenclave, mrsigner, payload)

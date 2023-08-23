@@ -75,9 +75,9 @@ def sign(fname, message) -> bytes:
 
 def main():
     # Prepare inputs
-    stripped_mre = sys.argv[1].lstrip('0x')
-    stripped_mrs = sys.argv[2].lstrip('0x')
-    stripped_payload = sys.argv[3].lstrip('0x')
+    stripped_mre = sys.argv[1].removeprefix('0x')
+    stripped_mrs = sys.argv[2].removeprefix('0x')
+    stripped_payload = sys.argv[3].removeprefix('0x')
     mrenclave = '0' * (64 - len(stripped_mre)) + stripped_mre
     mrsigner = '0' * (64 - len(stripped_mrs)) + stripped_mrs
     payload = '0' * (128 - len(stripped_payload)) + stripped_payload

@@ -162,7 +162,10 @@ library Asn1Decode {
     function bytesAt(bytes memory der, uint256 ptr) internal pure returns (bytes memory) {
         ptr.overflowCheck(der.length);
         if(ptr.content_len() >= 1) {
-            return der.substring(ptr.content_index(), ptr.content_len());
+            return der.substring(
+                ptr.content_index(),
+                ptr.content_len()
+            );
         }
         revert();
     }
@@ -344,14 +347,15 @@ type, (opt type) (len or len flag) (opt len ... N) (opt buf .. N)
             if(length >= 1)
             {
                 ixFirstContentByte = uint80(ix + 2);
-                ixLastContentByte += uint80(length);
+                ixLastContentByte = uint80(ixFirstContentByte + length - 1);
             }
         } else {
             // How large is the length field?
             uint8 lengthbytesLength = uint8(der[ix + 1] & 0x7F);
 
+
             // Avoid overflow.
-            require((ix + 2) < der.length);
+            require((ix + 2 + lengthbytesLength) < der.length);
             if (lengthbytesLength == 1) {
                 length = der.readUint8(ix + 2);
             } else if (lengthbytesLength == 2) {
@@ -370,11 +374,11 @@ type, (opt type) (len or len flag) (opt len ... N) (opt buf .. N)
             }
 
             // Content length field must be positive.
-            ixLastContentByte += uint80(lengthbytesLength);
+            ixLastContentByte += uint80(lengthbytesLength) + 1;
             if(length >= 1)
             {
                 ixFirstContentByte = uint80(ix + 2 + lengthbytesLength);
-                ixLastContentByte += uint80(length - 1);
+                ixLastContentByte = uint80(ixFirstContentByte + length - 1);
             }
         }
 

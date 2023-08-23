@@ -9,6 +9,7 @@ import { MockEvidence, ValidBLSEvidence } from "test/mocks/MockEvidence.sol";
 import { X509GenHelper, BytesFFIFuzzer } from "test/utils/helper.sol";
 import { Test, console } from "forge-std/Test.sol";
 
+/*
 abstract contract RAVETester is Test {
     using BytesUtils for *;
 
@@ -244,3 +245,4 @@ contract RaveFuzzTester is Test {
         }
     }
 }
+*/

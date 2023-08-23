@@ -19,7 +19,7 @@ def main():
 
     for p in paths:
         with open(p) as f:
-            hex_data = f.read().strip('0x')
+            hex_data = f.read().removeprefix('0x')
             bytes_data = bytes.fromhex(hex_data)
             cached_data.append(bytes_data)
         

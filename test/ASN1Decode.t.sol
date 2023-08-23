@@ -45,9 +45,12 @@ contract TestASN1 is Test {
     }
 
     function testANS1NextSiblingOfSuccess() public {
-        bytes memory buf = hex"030400112233030400112233";
+        bytes memory buf = hex"030400112233020400112233";
         uint256 ptr = NodePtr.getPtr(0, 2, 5);
-        buf.nextSiblingOf(ptr);
+        ptr = buf.nextSiblingOf(ptr);
+        uint256 out = buf.uintAt(ptr);
+        uint256 expect = 1122867;
+        assert(out == expect);
     }
 
     function testANS1FirstChildOfOverflow() public {
@@ -64,7 +67,6 @@ contract TestASN1 is Test {
         ptr = buf.firstChildOf(ptr);
         uint256 out = buf.uintAt(ptr);
         uint256 expect = 307;
-        console.log(out);
         assert(out == expect);
     }
 
@@ -332,6 +334,7 @@ contract TestASN1 is Test {
         uint256 root = buf.root();
         uint256 ptr = buf.nextSiblingOf(root);
         uint256 out = buf.uintAt(ptr);
+        assert(out == 1);
     }
 }
 

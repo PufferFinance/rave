@@ -268,20 +268,29 @@ contract TestASN1 is Test {
 
     function testASN1RootSuccessChances() public {
         // if, len = 1, buf 1
-        bytes memory a = hex"02010101";
-        a.root();
+        uint256 out = 0; uint256 ptr = 0;
+        bytes memory a = hex"02010201";
+        ptr = a.root();
+        out = a.uintAt(ptr);
+        assert(out == 2);
 
         // if:if, len 1, buf 1
-        bytes memory b = hex"02810101";
+        bytes memory b = hex"02810201";
         b.root();
+        out = a.uintAt(ptr);
+        assert(out == 2);
 
         // if:elseif, len 1 (2 bytes), buf 1
-        bytes memory c = hex"0282000101";
+        bytes memory c = hex"0282000102";
         c.root();
+        out = a.uintAt(ptr);
+        assert(out == 2);
 
         // if:..else var len 1 (3 bytes), buf 1
-        bytes memory d = hex"028300000101";
+        bytes memory d = hex"028300000102";
         d.root();
+        out = a.uintAt(ptr);
+        assert(out == 2);
     }
 
     function testASN1RejectMultibyteTags() public {
@@ -299,7 +308,6 @@ contract TestASN1 is Test {
         uint256 root = buf.root();
         uint256 ptr = buf.nextSiblingOf(root);
         uint256 out = buf.uintAt(ptr);
-        console.log(out);
     }
 }
 

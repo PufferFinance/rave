@@ -372,7 +372,7 @@ type, (opt type) (len or len flag) (opt len ... N) (opt buf .. N)
             if(length >= 1)
             {
                 ixFirstContentByte = uint80(ix + 2 + lengthbytesLength);
-                ixLastContentByte += uint80(length);
+                ixLastContentByte += uint80(length - 1);
             }
         }
 

@@ -291,6 +291,16 @@ contract TestASN1 is Test {
         //uint256 ptr = NodePtr.getPtr(0, 2, 3);
         a.root();
     }
+
+    function testASN1ZeroLenContentFieldsSuccess() public {
+        // field 1: 0200 (len zero)
+        // field 2: 0202 0001 (len 02)
+        bytes memory buf = hex"200002020001";
+        uint256 root = buf.root();
+        uint256 ptr = buf.nextSiblingOf(root);
+        uint256 out = buf.uintAt(ptr);
+        console.log(out);
+    }
 }
 
 /*

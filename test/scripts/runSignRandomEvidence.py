@@ -78,12 +78,9 @@ def sign(fname, message) -> bytes:
 
 def main():
     # Prepare inputs
-    stripped_mre = strip_0x(sys.argv[1])
-    stripped_mrs = strip_0x(sys.argv[2])
-    stripped_payload = strip_0x(sys.argv[3])
-    mrenclave = from_hex(stripped_mre)
-    mrsigner = from_hex(stripped_mrs)
-    payload = from_hex(stripped_payload)
+    mrenclave = base64.b64decode(to_b(sys.argv[1]))
+    mrsigner = base64.b64decode(to_b(sys.argv[2]))
+    payload = base64.b64decode(to_b(sys.argv[3]))
 
     # mock json report
     evidence, dec_quote_body = mock_evidence(mrenclave, mrsigner, payload)

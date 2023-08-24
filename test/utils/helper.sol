@@ -16,21 +16,19 @@ library BytesHelper {
         return false;
     }
 
-    function to_hex(bytes memory buffer) public pure returns (string memory) {
+    function to_hex(bytes memory buffer) public pure returns (bytes memory) {
 
         // Fixed buffer size for hexadecimal convertion
-        uint8 ch = 0; uint8 lower = 0; uint8 upper = 0;
-        bytes memory table = "0123456789ABCDEF";
-        bytes memory out = new bytes(buffer.length * 2);
-        for(uint256 i = 0; i < buffer.length; i++) {
-            ch = uint8(buffer[i]);
-            lower = ch % 16;
-            upper = (ch - (lower + 1)) % 16;
-            out[(i * 2)] = table[upper];
-            out[(i * 2) + 1] = table[lower];
+        bytes memory converted = new bytes(buffer.length * 2);
+
+        bytes memory _base = "0123456789ABCDEF";
+
+        for (uint256 i = 0; i < buffer.length; i++) {
+            converted[i * 2] = _base[uint8(buffer[i]) / 16];
+            converted[(i * 2) + 1] = _base[uint8(buffer[i]) % 16];
         }
 
-        return string(out);
+        return converted;
     }
 }
 

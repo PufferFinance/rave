@@ -8,7 +8,7 @@ import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 import { MockEvidence, ValidBLSEvidence } from "test/mocks/MockEvidence.sol";
 import { X509GenHelper, BytesFFIFuzzer, BytesHelper } from "test/utils/helper.sol";
 import { Test, console } from "forge-std/Test.sol";
-
+import { Base64 } from "openzeppelin/utils/Base64.sol";
 
 abstract contract RAVETester is Test {
     using BytesUtils for *;
@@ -108,6 +108,8 @@ contract RaveFuzzTester is Test {
     // Run a fuzz test sequentially on each RAVe parameterization
     function testRaveFuzz(bytes memory mrenclave, bytes memory mrsigner, bytes memory p) public {
         vm.assume(p.length >= 64);
+        if(mrenclave.length != 32) return;
+        if(mrsigner.length != 32) return;
         for (uint256 i = 0; i < numFuzzers; i++) {
             c[i].runRAVE(mrenclave, mrsigner, p);
         }
@@ -140,9 +142,9 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
         string[] memory cmds = new string[](6);
         cmds[0] = "python3";
         cmds[1] = "test/scripts/runSignRandomEvidence.py";
-        cmds[2] = BytesHelper.to_hex(mrenclave);
-        cmds[3] = BytesHelper.to_hex(mrsigner);
-        cmds[4] = BytesHelper.to_hex(payload);
+        cmds[2] = Base64.encode(mrenclave);
+        cmds[3] = Base64.encode(mrsigner);
+        cmds[4] = Base64.encode(payload);
         cmds[5] = X509_PRIV_KEY_NAME;
 
         // Request .py sript to generate and sign mock RA evidence

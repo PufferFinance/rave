@@ -24,7 +24,8 @@ def build_quote_body(mre, mrs, payload) -> bytes:
     body_bytes = bytes(MRENCLAVE_OFFSET) + mre
     body_bytes += bytes(MRSIGNER_OFFSET - len(body_bytes)) + mrs
     body_bytes += bytes(PAYLOAD_OFFSET - len(body_bytes)) + payload
-    body_bytes += bytes(64 - len(payload)) # pad extra bytes with 0s
+    if len(payload) < 64:
+        body_bytes += bytes(64 - len(payload)) # pad extra bytes with 0s
     assert len(body_bytes) == QUOTE_BODY_LENGTH 
     return body_bytes
 
@@ -42,7 +43,7 @@ def mock_evidence(mrenclave, mrsigner, payload):
         ('epidPseudonym', "EbrM6X6YCH3brjPXT23gVh/I2EG5sVfHYh+S54fb0rrAqVRTiRTOSfLsWSVTZc8wrazGG7oooGoMU7Gj5TEhsvsDIV4aYpvkSk/E3Tsb7CaGd+Iy1cEhLO4GPwdmwt/PXNQQ3htLdy3aNb7iQMrNbiFcdkVdV/tepdezMsSB8Go="),
         ("advisoryURL", "https://security-center.intel.com"),
         ("advisoryIDs", ["INTEL-SA-00334","INTEL-SA-00615"]),
-        ("isvEnclaveQuoteStatus", "OK"),
+        ("isvEnclaveQuoteStatus", "SW_HARDENING_NEEDED"),
         ("isvEnclaveQuoteBody", f"{enc_quote_body}"),
         
     ])

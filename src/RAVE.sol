@@ -37,6 +37,7 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
 
         // Verify the report was signed by the SigningPK
         if (!verifyRSA(reportBytes, sig, signingMod, signingExp)) {
+            console.logBytes(sig); 
             revert BadReportSignature();
         }
 
@@ -78,6 +79,8 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
         console.logBytes(truncMod);
         console.log(truncMod.length);
 
+        console.log("leaf cert modulus");
+        console.log(leafCertModulus.length);
         payload = verifyRemoteAttestation(report, sig, truncMod, leafCertExponent, mrenclave, mrsigner);
         return payload;
     }

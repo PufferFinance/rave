@@ -43,6 +43,8 @@ abstract contract RAVETester is Test {
         assert(keccak256(gotPayload.substring(0, expPayload.length)) == keccak256(expPayload));
     }
 
+    
+
     function test_VerifyRave() public view {
         bytes memory report = m.report();
         bytes memory sig = m.sig();
@@ -79,142 +81,11 @@ abstract contract RAVETester is Test {
     }
 }
 
+
 contract TestHappyRAVE is RAVETester {
     function setUp() public override {
         m = new ValidBLSEvidence();
         c = new RAVE();
-    }
-}
-
-contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
-    using BytesUtils for *;
-
-    RAVEBase c;
-
-    constructor(string memory _keyBits, bool _useCachedX509s) X509GenHelper(_keyBits) {
-        if (_useCachedX509s) {
-            console.log("Reading cached x509 values for numBits:", _keyBits);
-            readCached();
-        } else {
-            console.log("Generated new X509 values for numBits:", _keyBits);
-            setupFreshX509();
-        }
-        c = new RAVE();
-    }
-
-    function genNewEvidence(bytes memory mrenclave, bytes memory mrsigner, bytes memory payload)
-        public
-        returns (bytes memory, bytes memory)
-    {
-        assertEq(bytes(mrenclave).length, 66, "bad mre len");
-        assertEq(bytes(mrsigner).length, 66, "bad mrs len");
-        assertEq(bytes(payload).length, 130, "bad payload len");
-        string[] memory cmds = new string[](6);
-        cmds[0] = "python3";
-        cmds[1] = "test/scripts/runSignRandomEvidence.py";
-        cmds[2] = BytesHelper.toHexString(mrenclave);
-        cmds[3] = BytesHelper.toHexString(mrsigner);
-        cmds[4] = BytesHelper.toHexString(payload);
-        cmds[5] = X509_PRIV_KEY_NAME;
-
-        // Request .py sript to generate and sign mock RA evidence
-        bytes memory resp = vm.ffi(cmds);
-
-        console.logBytes(resp);
-
-        // Script expected to return an x509 signature and the RA report (with an encoding depenent on useJSONDecode)
-        (bytes memory signature, bytes memory values) = abi.decode(resp, (bytes, bytes));
-
-        return (signature, values);
-    }
-
-    function runRAVE(bytes memory mrenclave, bytes memory mrsigner, bytes memory p) public {
-        vm.assume(p.length >= 64);
-
-        // Convert the random bytes into valid utf-8 bytes
-        bytes memory payload = getFriendlyBytes(p).substring(0, 130);
-
-
-        // Request new RA evidence
-        (bytes memory signature, bytes memory reportValues) =
-            genNewEvidence(mrenclave, mrsigner, payload);
-
-        // Run rave to extract its payload
-        bytes memory gotPayload = c.rave(reportValues, signature, CERT_BYTES, MODULUS, EXPONENT, mrenclave, mrsigner);
-
-        console.log("got payload from rave");
-        console.logBytes(gotPayload);
-
-        // Verify it matches the expected payload
-        assertEq(keccak256(gotPayload.substring(0, 64)), keccak256(p.substring(0, 64)));
-
-        console.log("Passed test");
-    }
-}
-
-// Generate all the x509 certificates used in testing
-contract CacheTheX509s is Test {
-    bool useCachedX509s = false;
-
-    function test_setupTheX509s() public {
-        string[1] memory rsaKeySize = ["4096"]; // "512", "1024", "2048", "3072"
-
-        for (uint256 i = 0; i < rsaKeySize.length; i++) {
-            string memory _rsaKeySize = rsaKeySize[i];
-
-            console.log("Testing _rsaKeySize bits = ", _rsaKeySize);
-
-            // Setup fuzzer by running openSSL via FFI or read from cache
-            new RaveFuzzer(_rsaKeySize, useCachedX509s);
-
-            // Stall to prevent race conditions when testing against openSSL via FFI
-            for (uint256 s = 0; s < 30 ** 6; s++) { }
-        }
-    }
-}
-
-// Test a single FuzzTest instance on one known input
-contract RaveInstanceTest is RaveFuzzer {
-    // Manually adjust the parameters
-    string constant keyBits = "2048";
-    bool constant useCachedX509s = true;
-
-    constructor() RaveFuzzer(keyBits, useCachedX509s) { }
-
-    function test() public {
-        bytes memory mrenclave = hex"d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f";
-        bytes memory mrsigner = hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
-        bytes memory p =
-            hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
-
-        // Pass hardcoded values for sanity check
-        runRAVE(mrenclave, mrsigner, p);
-    }
-}
-
-// Test every FuzzTest parameterization on the same known input
-contract RaveSanityTester is Test {
-    bool useCachedX509s = true;
-
-    function testOnSanityCheckedValues() public {
-        bytes memory mrenclave = hex"d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f";
-        bytes memory mrsigner = hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
-        bytes memory p =
-            hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
-
-        string[1] memory rsaKeySize = ["2048"];
-
-        for (uint256 i = 0; i < rsaKeySize.length; i++) {
-            string memory _rsaKeySize = rsaKeySize[i];
-
-            console.log("Testing _rsaKeySize bits = ", _rsaKeySize);
-
-            // Setup fuzzer by running openSSL via FFI or read from cache
-            RaveFuzzer c = new RaveFuzzer(_rsaKeySize, useCachedX509s);
-
-            // Pass hardcoded values for sanity check
-            c.runRAVE(mrenclave, mrsigner, p);
-        }
     }
 }
 
@@ -244,3 +115,139 @@ contract RaveFuzzTester is Test {
         }
     }
 }
+
+contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
+    using BytesUtils for *;
+
+    RAVEBase c;
+
+    constructor(string memory _keyBits, bool _useCachedX509s) X509GenHelper(_keyBits) {
+        if (_useCachedX509s) {
+            console.log("Reading cached x509 values for numBits:", _keyBits);
+            readCached();
+        } else {
+            console.log("Generated new X509 values for numBits:", _keyBits);
+            setupFreshX509();
+        }
+        c = new RAVE();
+    }
+
+    function genNewEvidence(bytes memory mrenclave, bytes memory mrsigner, bytes memory payload)
+        public
+        returns (bytes memory, bytes memory)
+    {
+        assertEq(bytes(mrenclave).length, 32, "bad mre len");
+        assertEq(bytes(mrsigner).length, 32, "bad mrs len");
+        assertEq(bytes(payload).length, 64, "bad payload len");
+        string[] memory cmds = new string[](6);
+        cmds[0] = "python3";
+        cmds[1] = "test/scripts/runSignRandomEvidence.py";
+        cmds[2] = BytesHelper.toHexString(mrenclave);
+        cmds[3] = BytesHelper.toHexString(mrsigner);
+        cmds[4] = BytesHelper.toHexString(payload);
+        cmds[5] = X509_PRIV_KEY_NAME;
+
+        // Request .py sript to generate and sign mock RA evidence
+        bytes memory resp = vm.ffi(cmds);
+
+        console.logBytes(resp);
+
+        // Script expected to return an x509 signature and the RA report (with an encoding depenent on useJSONDecode)
+        (bytes memory signature, bytes memory values) = abi.decode(resp, (bytes, bytes));
+
+        return (signature, values);
+    }
+
+    function runRAVE(bytes memory mrenclave, bytes memory mrsigner, bytes memory p) public {
+        vm.assume(p.length <= 64);
+
+
+        // Request new RA evidence
+        (bytes memory signature, bytes memory reportValues) =
+            genNewEvidence(mrenclave, mrsigner, p);
+
+        // Run rave to extract its payload
+        bytes memory gotPayload = c.rave(reportValues, signature, CERT_BYTES, MODULUS, EXPONENT, mrenclave, mrsigner);
+
+        console.log("got payload from rave");
+        console.logBytes(gotPayload);
+
+        // Verify it matches the expected payload
+        assertEq(keccak256(gotPayload.substring(0, 64)), keccak256(p.substring(0, 64)));
+
+        console.log("Passed test");
+    }
+}
+
+
+// Generate all the x509 certificates used in testing
+contract CacheTheX509s is Test {
+    bool useCachedX509s = false;
+
+    function test_setupTheX509s() public {
+        string[1] memory rsaKeySize = ["4096"]; // "512", "1024", "2048", "3072"
+
+        for (uint256 i = 0; i < rsaKeySize.length; i++) {
+            string memory _rsaKeySize = rsaKeySize[i];
+
+            console.log("Testing _rsaKeySize bits = ", _rsaKeySize);
+
+            // Setup fuzzer by running openSSL via FFI or read from cache
+            new RaveFuzzer(_rsaKeySize, useCachedX509s);
+
+
+        }
+    }
+}
+
+
+
+// Test a single FuzzTest instance on one known input
+contract RaveInstanceTest is RaveFuzzer {
+    // Manually adjust the parameters
+    string constant keyBits = "2048";
+    bool constant useCachedX509s = false;
+
+    constructor() RaveFuzzer(keyBits, useCachedX509s) { }
+
+    function test() public {
+        bytes memory mrenclave = hex"d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f";
+        bytes memory mrsigner = hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
+        bytes memory p =
+            hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
+
+        // Pass hardcoded values for sanity check
+        runRAVE(mrenclave, mrsigner, p);
+    }
+}
+
+/*
+// Test every FuzzTest parameterization on the same known input
+contract RaveSanityTester is Test {
+    bool useCachedX509s = true;
+
+    function testOnSanityCheckedValues() public {
+        bytes memory mrenclave = hex"d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f";
+        bytes memory mrsigner = hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
+        bytes memory p =
+            hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
+
+        string[1] memory rsaKeySize = ["2048"];
+
+        for (uint256 i = 0; i < rsaKeySize.length; i++) {
+            string memory _rsaKeySize = rsaKeySize[i];
+
+            console.log("Testing _rsaKeySize bits = ", _rsaKeySize);
+
+            // Setup fuzzer by running openSSL via FFI or read from cache
+            RaveFuzzer c = new RaveFuzzer(_rsaKeySize, useCachedX509s);
+
+            // Pass hardcoded values for sanity check
+            c.runRAVE(mrenclave, mrsigner, p);
+        }
+    }
+}
+
+
+
+*/

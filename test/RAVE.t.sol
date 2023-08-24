@@ -43,8 +43,6 @@ abstract contract RAVETester is Test {
         assert(keccak256(gotPayload.substring(0, expPayload.length)) == keccak256(expPayload));
     }
 
-    
-
     function test_VerifyRave() public view {
         bytes memory report = m.report();
         bytes memory sig = m.sig();
@@ -94,12 +92,12 @@ contract RaveFuzzTester is Test {
     RaveFuzzer[] c;
     // Warning, if true this will fail if all x509s do not already exist
     bool useCachedX509s = true;
-    string[1] rsaKeySize = ["4096"];
-    uint256 numFuzzers = rsaKeySize.length;
+    string[1] rsaKeySize = ["2048"];
+    uint256 numFuzzers = 1;
 
     // Create all possible RAVEFuzzer (expensive so run only once)
     constructor() {
-        for (uint256 i = 0; i < rsaKeySize.length; i++) {
+        for (uint256 i = 0; i < numFuzzers; i++) {
             string memory _rsaKeySize = rsaKeySize[i];
 
             // Setup fuzzer by running openSSL via FFI or read from cache
@@ -142,9 +140,9 @@ contract RaveFuzzer is Test, X509GenHelper, BytesFFIFuzzer {
         string[] memory cmds = new string[](6);
         cmds[0] = "python3";
         cmds[1] = "test/scripts/runSignRandomEvidence.py";
-        cmds[2] = BytesHelper.toHexString(mrenclave);
-        cmds[3] = BytesHelper.toHexString(mrsigner);
-        cmds[4] = BytesHelper.toHexString(payload);
+        cmds[2] = BytesHelper.to_hex(mrenclave);
+        cmds[3] = BytesHelper.to_hex(mrsigner);
+        cmds[4] = BytesHelper.to_hex(payload);
         cmds[5] = X509_PRIV_KEY_NAME;
 
         // Request .py sript to generate and sign mock RA evidence

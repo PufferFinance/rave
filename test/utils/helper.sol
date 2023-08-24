@@ -16,24 +16,21 @@ library BytesHelper {
         return false;
     }
 
-    ///@dev converts bytes array to its ASCII hex string representation
-    /// TODO: Definitely more efficient way to do this by processing multiple (16?) bytes at once
-    /// but really a helper function for the tests, efficiency not key.
-    function toHexString(bytes memory input) public pure returns (string memory) {
-        require(input.length < type(uint256).max / 2 - 1);
-        bytes16 symbols = "0123456789abcdef";
-        bytes memory hex_buffer = new bytes(2 * input.length + 2);
-        hex_buffer[0] = "0";
-        hex_buffer[1] = "x";
+    function to_hex(bytes memory buffer) public pure returns (string memory) {
 
-        uint pos = 2;
-        uint256 length = input.length;
-        for (uint i = 0; i < length; ++i) {
-            uint _byte = uint8(input[i]);
-            hex_buffer[pos++] = symbols[_byte >> 4];
-            hex_buffer[pos++] = symbols[_byte & 0xf];
+        // Fixed buffer size for hexadecimal convertion
+        uint8 ch = 0; uint8 lower = 0; uint8 upper = 0;
+        bytes memory table = "0123456789ABCDEF";
+        bytes memory out = new bytes(buffer.length * 2);
+        for(uint256 i = 0; i < buffer.length; i++) {
+            ch = uint8(buffer[i]);
+            lower = ch % 16;
+            upper = (ch - (lower + 1)) % 16;
+            out[(i * 2)] = table[upper];
+            out[(i * 2) + 1] = table[lower];
         }
-        return string(hex_buffer);
+
+        return string(out);
     }
 }
 

@@ -180,6 +180,7 @@ library Asn1Decode {
         ptr.overflowCheck(der.length);
         if(ptr.content_len() >= 1) {
             uint256 len = (ptr.end_index() - ptr.type_index()) + 1;
+            require(ptr.type_index() + len <= der.length);
             return der.substring(ptr.type_index(), len);
         }
         revert();
@@ -274,6 +275,7 @@ library Asn1Decode {
         ptr.overflowCheck(der.length);
         if(ptr.content_len() >= 1) {
             uint256 len = (ptr.end_index() - ptr.type_index()) + 1;
+            require(ptr.type_index() + len <= der.length);
             return der.keccak(ptr.type_index(), len);
         }
         revert();
@@ -297,11 +299,11 @@ library Asn1Decode {
             require(der[ptr.content_index()] == 0x00);
 
             // Return the segment and avoid overflows.
-            uint256 valueLength = ptr.end_index() + 1 - ptr.content_index();
-            require(valueLength > 0);
-            require(ptr.content_index() + 1 < der.length);
-            require(valueLength - 1 < der.length);
-            return der.substring(ptr.content_index() + 1, valueLength - 1);
+            uint256 start_index = ptr.content_index() + 1;
+            uint256 valueLength = (ptr.end_index() - ptr.content_index());
+            require(start_index < der.length);
+            require(start_index + valueLength <= der.length);
+            return der.substring(start_index, valueLength);
         }
         revert();
     }
@@ -358,11 +360,11 @@ type, (opt type) (len or len flag) (opt len ... N) (opt buf .. N)
             if (lengthbytesLength == 1) {
                 length = der.readUint8(ix + 2);
             } else if (lengthbytesLength == 2) {
-                require((der.length - (ix + 2)) >= 2);
+                require(ix + 3 < der.length);
                 length = der.readUint16(ix + 2);
             } else {
                 // Ensure enough bytes left for len no.
-                require((der.length - (ix + 2)) >= lengthbytesLength);
+                require(ix + 2 + lengthbytesLength <= der.length);
                 require(lengthbytesLength <= 32);
 
                 // Read variable length len field.
@@ -385,6 +387,11 @@ type, (opt type) (len or len flag) (opt len ... N) (opt buf .. N)
         require(ixFirstContentByte < der.length);
         require(ixLastContentByte < der.length);
         require(ixLastContentByte > 0);
+
+        // If the end pointer value is less than start then
+        // it may lead to an underflow and this is
+        // particullarly bad with solidity's wrap-around math.
+        require(ixLastContentByte >= ixFirstContentByte);
 
         // Return the nodeptr structure.
         return NodePtr.getPtr(ix, ixFirstContentByte, ixLastContentByte);

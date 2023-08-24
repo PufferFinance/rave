@@ -6,6 +6,7 @@ import { SafeMath } from "openzeppelin-contracts/contracts/utils/math/SafeMath.s
 
 
 
+
 library BytesHelper {
     function notAllZeroes(bytes memory data) public pure returns (bool) {
         for (uint256 i = 0; i < data.length; i++) {
@@ -32,6 +33,23 @@ library BytesHelper {
     }
 }
 
+contract ExtraUtils is Test {
+    function uuid()
+        public
+        returns (string memory)
+    {
+        string[] memory cmds = new string[](2);
+        cmds[0] = "python3";
+        cmds[1] = "test/scripts/bin/get_uuid";
+
+        // Request .py sript to generate and sign mock RA evidence
+        bytes memory resp = vm.ffi(cmds);
+        console.logBytes(resp);
+
+        return (string(resp));
+    }
+}
+
 contract BytesFFIFuzzer is Test {
     // convert random fuzzed bytes -> hex string -> valid utf-8 bytes
     function getFriendlyBytes(bytes memory _fuzzedBytes) public pure returns (bytes memory) {
@@ -42,6 +60,8 @@ contract BytesFFIFuzzer is Test {
     function getFriendlyBytes32(bytes32 _fuzzedBytes) public pure returns (bytes memory) {
         return bytes(vm.toString(_fuzzedBytes));
     }
+
+
 }
 
 contract KeyGenHelper is Test {
@@ -66,7 +86,7 @@ contract KeyGenHelper is Test {
 }
 
 // Helper functions to generate self-signed x509 and methods to extract relevant info
-contract X509GenHelper is Test {
+contract X509GenHelper is Test, ExtraUtils {
     bytes public CERT_BYTES;
     bytes public CERT_BODY_BYTES;
     bytes public CERT_SIG;
@@ -81,7 +101,7 @@ contract X509GenHelper is Test {
     constructor(string memory keyBits) {
         KEY_BITS = keyBits;
         X509_NAME = string(abi.encodePacked("/tmp/", keyBits, "BitSelfSignedx509.pem"));
-        X509_PRIV_KEY_NAME = string(abi.encodePacked("/tmp/", keyBits, "Bitx509SigningKey.pem"));
+        X509_PRIV_KEY_NAME = string(abi.encodePacked("/tmp/", keyBits, ExtraUtils.uuid(), "Bitx509SigningKey.pem"));
     }
 
     function newSelfSignedX509() public {

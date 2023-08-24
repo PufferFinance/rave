@@ -221,10 +221,10 @@ contract RaveInstanceTest is RaveFuzzer {
     }
 }
 
-/*
+
 // Test every FuzzTest parameterization on the same known input
 contract RaveSanityTester is Test {
-    bool useCachedX509s = true;
+    bool useCachedX509s = false;
 
     function testOnSanityCheckedValues() public {
         bytes memory mrenclave = hex"d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f";
@@ -247,7 +247,3 @@ contract RaveSanityTester is Test {
         }
     }
 }
-
-
-
-*/

@@ -17,10 +17,11 @@ contract X509Verifier is Test {
 
     bytes constant _SHA256_PAD_ID_WITH_NULL = hex"3031300d060960864801650304020105000420";
     bytes constant _SHA256_PAD_ID_WITHOUT_NULL = hex"302f300b06096086480165030402010420";
+    bytes constant _CERT_PUB_ALG = hex"2A864886F70D010101";
+    bytes constant _CERT_SIG_ALG = hex"2a864886f70d01010b";
 
-    // DER encoded sequence for the RSA algorithm ID.
-    // Object ID is 1.2.840.113549.1.1.1.
-    bytes constant _RSA_ALGO_SEQ = hex"06092a864886f70d0101010500";
+    
+    // 06092a864886f70d01010b0500
 
     constructor() { }
 
@@ -191,17 +192,21 @@ contract X509Verifier is Test {
         view
         returns (bytes memory, bytes memory)
     {
-        // Pointer to top level asn1 object: Sequence{tbsCertificate, signatureAlgorithm, signatureValue}
-        uint256 root = cert.root();
-
         // Traverse to first in sequence (the tbsCertificate)
-        uint256 tbsPtr = cert.firstChildOf(root);
+        uint256 tbsPtr = cert.firstChildOf(cert.root());
 
         // Extracts the TBSCerificate (what is used as input to RSA-SHA256)
         bytes memory certBody = cert.allBytesAt(tbsPtr);
 
         // Top level traverse to signatureAlgorithm
         uint256 sigAlgPtr = cert.nextSiblingOf(tbsPtr);
+        require(
+            _CERT_SIG_ALG.compare(
+                cert.bytesAt(
+                    cert.firstChildOf(sigAlgPtr)
+                )
+            ) == 0
+        );
 
         // Top level traverse to signatureValue
         uint256 sigPtr = cert.nextSiblingOf(sigAlgPtr);
@@ -253,11 +258,14 @@ contract X509Verifier is Test {
         // Enter subjectPublicKeyInfo
         ptr = cert.firstChildOf(ptr); // point to subjectPublicKeyInfo.algorithm
 
-        // Require the algorithm to be RSA.
-        bytes memory algorithm = cert.bytesAt(ptr);
-        require(_RSA_ALGO_SEQ.compare(algorithm) == 0);
-        console.log("algorithm = ");
-        console.logBytes(algorithm);
+        // Require the pubkey algorithm to be RSA.
+        require(
+            _CERT_PUB_ALG.compare(
+                cert.bytesAt(
+                    cert.firstChildOf(ptr)
+                )
+            ) == 0
+        );
 
         ptr = cert.nextSiblingOf(ptr); // point to subjectPublicKeyInfo.subjectPublicKey
 

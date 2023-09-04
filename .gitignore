@@ -14,3 +14,6 @@ test/scripts/bin/error.log
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+
+# Log file I use for test output.
+all.txt

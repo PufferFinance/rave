@@ -35,14 +35,17 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
         (Values memory reportValues, bytes memory reportBytes) = _buildReportBytes(reportFieldsABI);
         console.log(string(reportBytes));
 
+        // Verify the report's contents match the expected
+        payload = _verifyReportContents(reportValues, mrenclave, mrsigner);
+        
+
         // Verify the report was signed by the SigningPK
         if (!verifyRSA(reportBytes, sig, signingMod, signingExp)) {
             console.logBytes(sig); 
             revert BadReportSignature();
         }
 
-        // Verify the report's contents match the expected
-        payload = _verifyReportContents(reportValues, mrenclave, mrsigner);
+
         return payload;
     }
 

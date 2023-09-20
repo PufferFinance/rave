@@ -13,7 +13,7 @@ The process involves:
     (3) Confirming that this CA was in fact Intel
     (also known as the 'report attestation signer CA -- this
     cert can be found in the certs directory in both
-    DER form and PEM form for convienence.)
+    DER form and PEM form for convenience.)
 
 The result is an API that can verify attestation reports
 on-chain issued by Intel. Unfortunately, the process to
@@ -35,6 +35,14 @@ scripts to make this a little easier.
     of the RAVE contract and calling rave() from scratch
     using the above function. It can be found in my fork
     here: https://github.com/matthew-puffer-finance-forks/rave-foundry/blob/master/deploy.sh
+
+Working with signed data is inherently painful because if
+anything is off by so much as a single bit it will fail.
+While testing this software I had the issue of a single
+new line being added to the report due to the echo command.
+Nothing was wrong with the code but the addition caused all
+checks to fail. There are tools to assess whether much of
+the values are correct in the /test/scripts/bin directory.
 */
 
 

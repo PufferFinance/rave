@@ -45,7 +45,7 @@ sig_hex=$(echo "$sig" | base64 --decode | ./to_hex)
 report_hex=$(echo -n "$report" | ./to_hex)
 
 # Extract fields from JSON report and store as ABI encoded hex.
-report_calldata_hex=$(echo -n "$report" | ./report_tndo_calldata)
+report_calldata_hex=$(echo -n "$report" | ./report_to_calldata)
 
 # Inputs should all be hex.
 abi_out=$(

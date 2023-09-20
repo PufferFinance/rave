@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity >=0.8.0 <0.9.0;
 
+import { RAVEConsts } from "./RAVEConsts.sol";
 import { X509Verifier } from "./X509Verifier.sol";
 import { JSONBuilder } from "./JSONBuilder.sol";
 import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
@@ -69,6 +70,21 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
         bytes memory mrenclave,
         bytes memory mrsigner
     ) public view override returns (bytes memory payload) {
+        /*
+        The root CA params are hard-coded in the contract.
+        If blank data is passed to the function use these values.
+        Otherwise use the passed values so self-signed certs
+        can be used as input test data.
+        */
+        if(
+            (signingMod.compare(NULL) == 0)
+                &&
+            (signingExp.compare(NULL) == 0)
+        ) {
+            signingMod = _INTEL_ROOT_MOD;
+            signingExp = _INTEL_ROOT_EXP;
+        }
+
         // Verify the leafX509Cert was signed with signingMod and signingExp
         (bytes memory leafCertModulus, bytes memory leafCertExponent) =
            verifySignedX509(leafX509Cert, signingMod, signingExp);

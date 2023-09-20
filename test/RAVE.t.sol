@@ -72,7 +72,7 @@ abstract contract RAVETester is Test {
     ) public view {
         // Run rave to extract its payload
         bytes memory gotPayload =
-            c.rave(bytes(report), sig, signingCert, intelRootModulus, intelRootExponent, mrenclave, mrsigner);
+            c.rave(bytes(report), sig, signingCert, hex"", hex"", mrenclave, mrsigner);
 
         // Verify it matches the expected payload
         assert(keccak256(gotPayload.substring(0, expPayload.length)) == keccak256(expPayload));

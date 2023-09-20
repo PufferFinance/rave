@@ -26,6 +26,8 @@ contract X509Verifier is Test {
     // Intel SGX Attestation Report Signing [subject] (issuer blank)
     bytes constant _SGX_REPORT_SIGNING_SUBJECT = hex"310b3009060355040613025553310b300906035504080c0243413114301206035504070c0b53616e746120436c617261311a3018060355040a0c11496e74656c20436f72706f726174696f6e3130302e06035504030c27496e74656c20534758204174746573746174696f6e205265706f7274205369676e696e67204341";
 
+    bytes constant _SGX_REPORT_SIGNING_ISSUER = hex"310b3009060355040613025553310b300906035504080c0243413114301206035504070c0b53616e746120436c617261311a3018060355040a0c11496e74656c20436f72706f726174696f6e312d302b06035504030c24496e74656c20534758204174746573746174696f6e205265706f7274205369676e696e67";
+
     // Intel SGX Attestation Report Root CA Signing [subject and issuer]
     bytes constant _SGX_ROOT_SA_SUBJECT = hex"310b3009060355040613025553310b300906035504080c0243413114301206035504070c0b53616e746120436c617261311a3018060355040a0c11496e74656c20436f72706f726174696f6e3130302e06035504030c27496e74656c20534758204174746573746174696f6e205265706f7274205369676e696e67204341";
 
@@ -207,14 +209,15 @@ contract X509Verifier is Test {
         Extended checks for issuer and subject will
         be disabled in this case.
         */
-        bool extended_checks = true;
+        bool extended_checks = false;
         if(
-            (parentMod.compare(_INTEL_ROOT_MOD) != 0)
+            (parentMod.compare(_INTEL_ROOT_MOD) == 0)
                 &&
-            (parentExp.compare(_INTEL_ROOT_EXP) != 0)
+            (parentExp.compare(_INTEL_ROOT_EXP) == 0)
         ) {
-            extended_checks = false;
+            extended_checks = true;
         }
+        console.log(extended_checks);
 
         // Traverse to first in sequence (the tbsCertificate)
         uint256 tbsPtr = cert.firstChildOf(cert.root());
@@ -224,15 +227,13 @@ contract X509Verifier is Test {
 
         // Top level traverse to signatureAlgorithm
         uint256 sigAlgPtr = cert.nextSiblingOf(tbsPtr);
-        if(extended_checks) {
-            require(
-                _CERT_SIG_ALG.compare(
-                    cert.bytesAt(
-                        cert.firstChildOf(sigAlgPtr)
-                    )
-                ) == 0
-            );
-        }
+        require(
+            _CERT_SIG_ALG.compare(
+                cert.bytesAt(
+                    cert.firstChildOf(sigAlgPtr)
+                )
+            ) == 0
+        );
 
         // Top level traverse to signatureValue
         uint256 sigPtr = cert.nextSiblingOf(sigAlgPtr);
@@ -264,14 +265,14 @@ contract X509Verifier is Test {
         ptr = cert.nextSiblingOf(ptr); // point to issuer
         console.log("issuer...");
         console.logBytes(cert.bytesAt(ptr));
-
-        /*
-        require(
-            _SGX_REPORT_SIGNING_SUBJECT.compare(
-                cert.bytesAt(ptr)
-            ) == 0
-        );
-        */
+        if(extended_checks) {
+            require(
+                _SGX_REPORT_SIGNING_SUBJECT.compare(
+                    cert.bytesAt(ptr)
+                ) == 0
+            );
+        }
+        
 
         ptr = cert.nextSiblingOf(ptr); // point to validity
 
@@ -292,6 +293,13 @@ contract X509Verifier is Test {
         ptr = cert.nextSiblingOf(ptr); // point to subject
         console.log("subject");
         console.logBytes(cert.bytesAt(ptr));
+        if(extended_checks) {
+            require(
+                _SGX_REPORT_SIGNING_ISSUER.compare(
+                    cert.bytesAt(ptr)
+                ) == 0
+            );
+        }
 
 
         ptr = cert.nextSiblingOf(ptr); // point to subjectPublicKeyInfo
@@ -300,15 +308,13 @@ contract X509Verifier is Test {
         ptr = cert.firstChildOf(ptr); // point to subjectPublicKeyInfo.algorithm
 
         // Require the pubkey algorithm to be RSA.
-        if(extended_checks) {
-            require(
-                _CERT_PUB_ALG.compare(
-                    cert.bytesAt(
-                        cert.firstChildOf(ptr)
-                    )
-                ) == 0
-            );
-        }
+        require(
+            _CERT_PUB_ALG.compare(
+                cert.bytesAt(
+                    cert.firstChildOf(ptr)
+                )
+            ) == 0
+        );
 
         ptr = cert.nextSiblingOf(ptr); // point to subjectPublicKeyInfo.subjectPublicKey
 

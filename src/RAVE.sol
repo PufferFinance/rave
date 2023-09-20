@@ -1,3 +1,43 @@
+/*
+The most significant function in this module is rave().
+The purpose of RAVE is to validate the integrity of an
+'attestation report' vouched for by Intel and return the
+reports payload body on success.
+
+The process involves:
+    (1) Re-constructing a JSON attestation report that
+    byte-for-byte matches the original report returned by
+    the appropriate Intel attestation APIs.
+    (2) Confirming that the report was signed by an X509
+    'leaf' certificate issued by a CA.
+    (3) Confirming that this CA was in fact Intel
+    (also known as the 'report attestation signer CA -- this
+    cert can be found in the certs directory in both
+    DER form and PEM form for convienence.)
+
+The result is an API that can verify attestation reports
+on-chain issued by Intel. Unfortunately, the process to
+call the rave() function is quite involved. One has to:
+    (1) Pack a special list of report fields as bytes.
+    (2) Extract the right enclave hash values.
+    (3) And pass in the right leaf certificate values.
+
+All of this is easier said than done. But I've created some
+scripts to make this a little easier.
+    (1) There is a script that takes the output of the
+    secure signer binary (ss_out) and converts it into a
+    list of hex data for calling rave(). It can be found in
+    /test/scripts/bin/ss_to_abi. The bin directory also
+    contains other useful commands for working with certs
+    and doing operations needed for RAVE. You will need to cd
+    to this dir to use them though.
+    (2) There is also a script demonstrating full deployment
+    of the RAVE contract and calling rave() from scratch
+    using the above function. It can be found in my fork
+    here: https://github.com/matthew-puffer-finance-forks/rave-foundry/blob/master/deploy.sh
+*/
+
+
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity >=0.8.0 <0.9.0;
 
@@ -50,23 +90,48 @@ contract RAVE is Test, RAVEBase, JSONBuilder, X509Verifier {
         return payload;
     }
 
+
+
     /**
      * @inheritdoc RAVEBase
      */
     function rave(
         // ABI encoded list of report fields as bytes.
-        // current incorrectly passing json.
         bytes calldata report,
+
+        /*
+        RSA encryption of the report from the leaf cert.
+        The exact algorithm is: sha256WithRSA (PKCS#1 padding.)
+        The signature can be verified with the signing
+        public key found inside the leaf X509 cert.
+        */
         bytes memory sig,
 
-        // root ca or report cert?
+        /*
+        This can be a leaf certificate issued by Intel's
+        'report signing CA' or it can be a self-signed cert.
+        Refer to the field bellow for more details.
+        */
         bytes memory leafX509Cert,
 
-        // root ca or report cert?
-        // usage seems to indicate intel root ca
+        /*
+        The fields here allow passing in the parameters
+        for the CA who issued the leaf certificate.
+        Set the bytes to empty for both to force it to use
+        the Intel root CA. Otherwise, you can pass in your
+        own values to test the function with self-signed certs.
+        */
         bytes memory signingMod,
         bytes memory signingExp,
 
+        /*
+        These are special values that belong to the enclave binary
+        and hardware that did the attestation report.
+        You can gather them using:
+            occlum print mrenclave
+            occlum print mrsigner
+        In the enclave directory.
+        */
         bytes memory mrenclave,
         bytes memory mrsigner
     ) public view override returns (bytes memory payload) {

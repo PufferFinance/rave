@@ -7,9 +7,10 @@ import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 import { SafeMath } from "openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import { Utils } from "./Utils.sol";
+import "ethereum-datetime/DateTime.sol";
 import { Test, console } from "forge-std/Test.sol";
 
-contract X509Verifier is Test {
+contract X509Verifier is Test, DateTime {
     using Asn1Decode for bytes;
     using BytesUtils for bytes;
     using Utils for bytes;
@@ -166,6 +167,30 @@ contract X509Verifier is Test {
 
         // Compare recovered digest to encoded input digest.
         return success && (keccak256(res) == keccak256(encodedMsg));
+    }
+
+    function toX509Time(bytes memory x509Time) public returns (uint) {
+        uint16 yrs;  uint8 mnths;
+        uint8  dys;  uint8 hrs;
+        uint8  mins; uint8 secs;
+        uint8  offset;
+
+        if (x509Time.length == 13) {
+        if (uint8(x509Time[0])-48 < 5) yrs += 2000;
+        else yrs += 1900;
+        }
+        else {
+        yrs += (uint8(x509Time[0])-48) * 1000 + (uint8(x509Time[1])-48) * 100;
+        offset = 2;
+        }
+        yrs +=  (uint8(x509Time[offset+0])-48)*10 + uint8(x509Time[offset+1])-48;
+        mnths = (uint8(x509Time[offset+2])-48)*10 + uint8(x509Time[offset+3])-48;
+        dys +=  (uint8(x509Time[offset+4])-48)*10 + uint8(x509Time[offset+5])-48;
+        hrs +=  (uint8(x509Time[offset+6])-48)*10 + uint8(x509Time[offset+7])-48;
+        mins += (uint8(x509Time[offset+8])-48)*10 + uint8(x509Time[offset+9])-48;
+        secs += (uint8(x509Time[offset+10])-48)*10 + uint8(x509Time[offset+11])-48;
+
+        return toTimestamp(yrs, mnths, dys, hrs, mins, secs);
     }
 
     /*

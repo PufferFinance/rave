@@ -11,7 +11,7 @@ import { RAVE } from "rave/RAVE.sol";
 import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 import { Base64 } from "openzeppelin/utils/Base64.sol";
 
-contract TestViewX509 is Test {
+contract TestViewX509 is Test, X509Verifier {
     using Asn1Decode for bytes;
     using BytesUtils for bytes;
     using Utils for bytes;
@@ -49,6 +49,14 @@ contract TestViewX509 is Test {
         console.log("issuer...");
         console.logBytes(cert.bytesAt(ptr));
         ptr = cert.nextSiblingOf(ptr); // point to validity
+        console.logBytes(cert.bytesAt(ptr));
+
+        ptr = cert.firstChildOf(ptr);
+
+        uint40 validNotBefore = uint40(toX509Time(cert.bytesAt(ptr)));
+        console.log(validNotBefore);
+
+        return;
 
         // Traverse until the subjectPublicKeyInfo field
         ptr = cert.nextSiblingOf(ptr); // point to subject

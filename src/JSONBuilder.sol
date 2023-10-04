@@ -51,10 +51,17 @@ contract CustomJSONBuilder {
     }
 
     function buildJSON(string[] memory values) public view returns (string memory) {
-        require(values.length == keys.length);
+        // require(values.length == keys.length);
+        if (values.length != keys.length) {
+            revert();
+        }
         string memory json = "";
-        for (uint256 i = 0; i < keys.length; i++) {
+        uint256 length = keys.length;
+        for (uint256 i = 0; i < length; ) {
             json = string(abi.encodePacked(json, keys[i], values[i]));
+            unchecked {
+                i++; 
+            }
         }
         return string(abi.encodePacked("{", json, '"}'));
     }

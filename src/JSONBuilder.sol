@@ -50,7 +50,7 @@ contract CustomJSONBuilder {
         keys = _keys;
     }
 
-    function buildJSON(string[] memory values) public view returns (string memory) {
+    function buildJSON(string[] calldata values) public view returns (string memory) {
         // require(values.length == keys.length);
         if (values.length != keys.length) {
             revert();

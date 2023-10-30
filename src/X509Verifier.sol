@@ -7,7 +7,7 @@ import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 import { SafeMath } from "openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import { Utils } from "./Utils.sol";
-import "ethereum-datetime/DateTime.sol";
+import "./DateTime.sol";
 import { Test, console } from "forge-std/Test.sol";
 
 contract X509Verifier is Test, DateTime {
@@ -169,7 +169,7 @@ contract X509Verifier is Test, DateTime {
         return success && (keccak256(res) == keccak256(encodedMsg));
     }
 
-    function toX509Time(bytes memory x509Time) public returns (uint) {
+    function toX509Time(bytes memory x509Time) public pure returns (uint) {
         uint16 yrs;  uint8 mnths;
         uint8  dys;  uint8 hrs;
         uint8  mins; uint8 secs;
@@ -248,7 +248,7 @@ contract X509Verifier is Test, DateTime {
         uint256 tbsPtr = cert.firstChildOf(cert.root());
 
         // Extracts the TBSCerificate (what is used as input to RSA-SHA256)
-        bytes memory certBody = cert.allBytesAt(tbsPtr);
+        //bytes memory certBody = cert.allBytesAt(tbsPtr);
 
         // Top level traverse to signatureAlgorithm
         uint256 sigAlgPtr = cert.nextSiblingOf(tbsPtr);
@@ -267,7 +267,7 @@ contract X509Verifier is Test, DateTime {
         bytes memory signature = cert.bytesAt(sigPtr);
 
         // Verify the parent signed the certBody
-        require(verifyChildCert(certBody, signature, parentMod, parentExp), "verifyChildCert fail");
+        require(verifyChildCert(cert.allBytesAt(tbsPtr), signature, parentMod, parentExp), "verifyChildCert fail");
         //require(verifyRSA(certBody, signature, parentMod, parentExp), "verifyChildCert fail");
 
         //  ----------------
@@ -289,7 +289,6 @@ contract X509Verifier is Test, DateTime {
         ptr = cert.nextSiblingOf(ptr); // point to signature
         ptr = cert.nextSiblingOf(ptr); // point to issuer
         console.log("issuer...");
-        console.logBytes(cert.bytesAt(ptr));
         if(extended_checks) {
             require(
                 _SGX_REPORT_SIGNING_SUBJECT.compare(
@@ -300,6 +299,29 @@ contract X509Verifier is Test, DateTime {
         
 
         ptr = cert.nextSiblingOf(ptr); // point to validity
+        //ptr = cert.firstChildOf(ptr);
+
+        // Arrive at the validity field
+        // todo verifiy validity timestamps
+        console.log("Valid before unix = ");
+
+        console.logBytes(cert.bytesAt(ptr));
+        console.logBytes(cert.bytesAt(cert.firstChildOf(ptr)));
+
+        // Valid before.
+        ptr = cert.firstChildOf(ptr);
+        uint x = toX509Time(cert.bytesAt(ptr));
+        console.log(x);
+
+        // Valid after.
+        ptr = cert.nextSiblingOf(ptr);
+        x = toX509Time(cert.bytesAt(ptr));
+        console.log(x);
+
+        //ptr = cert.firstChildOf(ptr); 
+        //x = toX509Time(cert.bytesAt(cert.firstChildOf(ptr)));
+        //console.log(x);
+
 
         // Arrive at the validity field
         // todo verifiy validity timestamps
@@ -313,8 +335,9 @@ contract X509Verifier is Test, DateTime {
         // console.logBytes(validNotAfter);
         // uint40 validNotAfter = uint40(toTimestamp(cert.bytesAt(validityPtr)));
         // console.log("validNotAfter: %s", validNotAfter);
-
         // Traverse until the subjectPublicKeyInfo field
+
+
         ptr = cert.nextSiblingOf(ptr); // point to subject
         console.log("subject");
         console.logBytes(cert.bytesAt(ptr));

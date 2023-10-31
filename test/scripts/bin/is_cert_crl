@@ -1,0 +1,4 @@
+#!/bin/bash
+
+out=$(openssl crl -text -noout 2>&1 >/dev/null | ./re_find "unable to load")
+./echo $([ "$out" == "" ] && ./echo "1" || ./echo "0")

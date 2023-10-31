@@ -1,0 +1,48 @@
+#!/usr/bin/python3
+
+"""
+Generate RSA PKCS#1 encoded messages so they can be used
+to compare to the implementation in X509Verifier.sol.
+"""
+
+import os, eth_abi, argparse, sys
+import binascii
+import hashlib
+from Crypto.Signature import pkcs1_15
+from Crypto.Signature.pkcs1_15 import _EMSA_PKCS1_V1_5_ENCODE
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
+from Crypto.Util import number
+from Crypto.Util.number import ceil_div, bytes_to_long, long_to_bytes
+
+def get_rsa_pkcs1_padding(msg, mod_bits, include_null=True):
+    # Hash the message with SHA256.
+    h = SHA256.new(msg)
+
+    # Convert from bits to bytes.
+    k = ceil_div(mod_bits, 8)
+
+    # Return the padded message with null params for der(HID, h).
+    # DerObject.__init__(self, 0x05, b'', None, False)
+    # b'\x05\x00'
+    em = _EMSA_PKCS1_V1_5_ENCODE(h, k, include_null)
+
+    # NOTE: Very important: may need to test both of these in our script.
+    # WITH and WITHOUT the algorithm id!
+    return em
+
+if __name__ == "__main__":
+    data = sys.stdin.buffer.read()
+    mod_bits = 2048
+    if len(sys.argv) == 2:
+        mod_bits = int(sys.argv[1])
+
+    inc_null = True
+    if len(sys.argv) == 3:
+        inc_null = bool(sys.argv[2])
+
+    out = get_rsa_pkcs1_padding(data, mod_bits, inc_null)
+    out_hex = binascii.hexlify(out).decode("utf-8")
+    digest = hashlib.sha256(out).digest()
+    digest_hex = binascii.hexlify(digest).decode("utf-8")
+    print(out_hex, end="")

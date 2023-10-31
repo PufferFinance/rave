@@ -1,0 +1,12 @@
+INPUT=$(./echo $(cat -) | ./trim_whitespace)
+MRSIGNER="83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e"
+
+./echo $MRSIGNER | ./is_valid_hex_len > /dev/null
+./echo $INPUT | ./is_valid_hex_len > /dev/null
+
+if [ "$INPUT" = "$MRSIGNER" ]; then
+    ./echo '1'
+else
+    echo 'input mrsigner not correct '$INPUT >> error.log
+    ./echo '0'
+fi

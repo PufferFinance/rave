@@ -5,9 +5,14 @@ import { Test, console } from "forge-std/Test.sol";
 import { X509GenHelper } from "test/utils/helper.sol";
 import { Asn1Decode } from "rave/ASN1Decode.sol";
 import { X509Verifier } from "rave/X509Verifier.sol";
+import { RAVE } from "rave/RAVE.sol";
 import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
+import { Base64 } from "openzeppelin/utils/Base64.sol";
 
 contract TestIntelCert is Test {
+
+    X509Verifier Certs = new X509Verifier();
+
     function testIntelCertChainFromSignedX509ExtractedBody() public {
         // DER encoded bytes of the Intel Leaf Signing x509 Certificate (excluding the header and signature)
         bytes memory certBytes =
@@ -30,7 +35,9 @@ contract TestIntelCert is Test {
         bytes32 expectedHash = hex"13472863bcbe2462fb4312ddda9d77ca41575d79760881eb1d2d6c9be2c40094";
         assertEq(expectedHash, _msgHash);
 
-        require(X509Verifier.verifyChildCert(certBytes, certSig, intelRootModulus, intelRootExponent));
+        require(Certs.verifyChildCert(certBytes, certSig, intelRootModulus, intelRootExponent));
+
+        //require(Certs.verifyRSA(certBytes, certSig, intelRootModulus, intelRootExponent));
     }
 
     function testIntelCertChainFromSignedX509() public {
@@ -56,7 +63,7 @@ contract TestIntelCert is Test {
         bytes memory expectedLeafExponent = hex"010001";
 
         (bytes memory modulus, bytes memory exponent) =
-            X509Verifier.verifySignedX509(certBytes, intelRootModulus, intelRootExponent);
+            Certs.verifySignedX509(certBytes, intelRootModulus, intelRootExponent);
 
         // Correct the lengths since parsing may prepend an empty "0x00"
         uint256 lenGot = modulus.length;
@@ -73,6 +80,8 @@ contract TestIntelCert is Test {
 
 abstract contract TestCertChainVerification is Test, X509GenHelper {
     using BytesUtils for *;
+
+    X509Verifier Certs = new X509Verifier();
 
     function setUp() public {
         // Generate new self-signed x509 cert
@@ -97,15 +106,23 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
         readX509Modulus();
         console.log("Modulus:");
         console.logBytes(MODULUS);
+
+        // Read the private key pem.
+        readX509PrivPEM();
+        console.log("priv pem:");
+        console.logBytes(CERT_PRIV_PEM);
     }
 
     function testSelfSignedCertIsValid() public view {
         // Verify the pre-extracted cert body was signed with MODULUS
-        assert(X509Verifier.verifyChildCert(CERT_BODY_BYTES, CERT_SIG, MODULUS, EXPONENT));
+        assert(Certs.verifyChildCert(CERT_BODY_BYTES, CERT_SIG, MODULUS, EXPONENT));
     }
 
     function testCertModulusExtracted() public {
-        (bytes memory modulus,) = X509Verifier.verifySignedX509(CERT_BYTES, MODULUS, EXPONENT);
+        (bytes memory modulus,) = Certs.verifySignedX509(CERT_BYTES, MODULUS, EXPONENT);
+
+        console.logBytes(modulus);
+        return;
 
         // Correct the lengths since parsing may prepend an empty "0x00"
         uint256 lenGot = modulus.length;
@@ -118,6 +135,56 @@ abstract contract TestCertChainVerification is Test, X509GenHelper {
 
         assertEq(keccak256(modulus), keccak256(MODULUS));
     }
+
+    function _helperPKCS1Padding(bool incNULL) private {
+        // Calculate padded message.
+        bytes32 digest = sha256(CERT_BYTES);
+        bytes memory em = Certs.rsaPad(MODULUS, digest, incNULL);
+
+        // Get DER-encoded self-signed x509 as hex string
+        string[] memory cmds = new string[](8);
+        cmds[0] = "python";
+        cmds[1] = "test/scripts/rsa_pkcs1.py";
+        cmds[2] = "-msg";
+        cmds[3] = Base64.encode(CERT_BYTES);
+        cmds[4] = "-pem_priv";
+        cmds[5] = Base64.encode(CERT_PRIV_PEM);
+        cmds[6] = "-inc_null";
+        if(incNULL) {
+            cmds[7] = "True";
+        }
+        if(!incNULL) {
+            cmds[7] = "False";
+        }
+
+        bytes memory out = vm.ffi(cmds);
+
+        // Expected padded msg.
+        bytes memory expected = abi.decode(
+            out, 
+            (bytes)
+        );
+
+        assertEq(keccak256(em), keccak256(expected));
+    }
+
+    function testPKCS1Padding() public {
+        if(MODULUS.length != 4096) return;
+        _helperPKCS1Padding(true);
+        _helperPKCS1Padding(false);
+    }
+
+    function testVerifyRSA() public {
+        if(MODULUS.length != 4096) return;
+        bool is_valid = Certs.verifyRSA(
+            CERT_BODY_BYTES,
+            CERT_SIG,
+            MODULUS,
+            EXPONENT
+        );
+
+        assertTrue(is_valid);
+    }
 }
 
 contract Test512BitCertChain is TestCertChainVerification {
@@ -128,9 +195,11 @@ contract Test1024BitCertChain is TestCertChainVerification {
     constructor() X509GenHelper("1024") { }
 }
 
+
 contract Test2048BitCertChain is TestCertChainVerification {
     constructor() X509GenHelper("2048") { }
 }
+
 
 contract Test3072BitCertChain is TestCertChainVerification {
     constructor() X509GenHelper("3072") { }

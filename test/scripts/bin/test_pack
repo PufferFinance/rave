@@ -1,0 +1,10 @@
+#!/bin/bash
+
+<<comment
+
+    ./echo "outer 3" | $(./echo "outer 2" | ./pack)
+
+comment
+
+out=$(eval $(./echo "outer 2" | $(./echo "outer 1" | ./pack) ) )
+./echo "$out"

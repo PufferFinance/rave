@@ -1,0 +1,32 @@
+#!/usr/bin/python3
+
+import re, sys, json
+from jsonschema import validate
+from lib import *
+
+data = sys.stdin.buffer.read()
+data = data.decode("utf-8")
+
+# Whitespace should not exist in the report.
+ws = re.findall("\s+", data)
+if len(ws):
+    log(F"whitespace found in report = '{data}'")
+    print("0", end="")
+    exit()
+
+# Should use double quotes.
+if "'" in data:
+    log(f"Double quotes found in report = '{data}'")
+    print("0", end="")
+    exit()
+
+# Use JSON schema to validate the report structure.
+try:
+    instance = json.loads(data)
+    validate(instance=instance, schema=REPORT_SCHEMA)
+    print("1", end="")
+    exit()
+except Exception:
+    log(f"JSON schema validation error for report = '{data}' error = '{str(e)}'")
+    print("0", end="")
+    exit()

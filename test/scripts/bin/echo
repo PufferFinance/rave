@@ -1,0 +1,8 @@
+#!/bin/bash
+
+<<comment
+    By default the 'echo' command adds a newline.
+    This is an alias to echo that does.
+comment
+
+echo -n -e $1

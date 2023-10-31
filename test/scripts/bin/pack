@@ -1,0 +1,32 @@
+#!/usr/bin/python3
+
+"""
+
+input > unsigned long long (length) (hex) + input (hex)
+
+"""
+
+import select
+import sys
+import binascii
+import struct
+
+if select.select([sys.stdin, ], [], [], 0.0)[0]:
+    data = sys.stdin.buffer.read()
+else:
+    data = b""
+
+parent = b""; parent_hex = b""
+if len(sys.argv) == 2:
+    parent_hex = sys.argv[1].encode("ascii")
+    parent = binascii.unhexlify(parent_hex)
+
+if len(data):
+    hdr = struct.pack("Q", len(data) * 2)
+    buf = parent + hdr + data
+    out = binascii.hexlify(buf).decode("utf-8")
+    assert(len(out) % 2 == 0)
+
+    print(f"./pack {out}", end="")
+else:
+    print(parent_hex.decode(), end="")

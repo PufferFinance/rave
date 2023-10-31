@@ -1,0 +1,38 @@
+
+Intel attestation service (IAS) certificate chain:
+
+    Intel SGX CA root cert
+        Attestation Report root certificate revokation list (CRL)
+        Attestation Report root "signing" CA
+            Attestation Report "signing" Certificate
+                This is unique to each enclave.
+
+Client machine:
+    Attestation Report "signing" Certificate
+        attestation report
+
+Intel CPU:
+
+    https://cdrdv2.intel.com/v1/dl/getContent/671370
+        Page 3
+
+
+    (1) Root seal key (unique to each processor)
+        - Private key not retained by Intel
+        - Intel has public key to verify signed data.
+
+    (2) Root provisioning key (unique to each processor)
+        - Private key retained by Intel.
+        - Processor keeps public key to create channels to Intel.
+        - Does provisioning seal.
+
+IAS
+
+    
+Report signature verification:
+
+https://api.trustedservices.intel.com/documents/IAS-API-Spec-rev-4.0.pdf
+    Page 20
+
+https://certificates.trustedservices.intel.com/Intel_SGX_Attestation_RootCA.pem (PEM)
+https://certificates.trustedservices.intel.com/Intel_SGX_Attestation_RootCA.cer (DER)

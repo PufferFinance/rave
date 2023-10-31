@@ -1,0 +1,4 @@
+#!/bin/bash
+
+
+eval ./echo $(openssl x509 -text -noout 2>&1 | ./re_find "[(]([0-9]+) bit[)]")

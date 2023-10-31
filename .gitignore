@@ -3,5 +3,17 @@ out/
 *.pem
 *.der
 .env
+env/
 .DS_Store
 .vscode
+test/mocks/evidence.json
+test/scripts/ss_out
+test/scripts/bin/error.log
+*ss_out*
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Log file I use for test output.
+all.txt

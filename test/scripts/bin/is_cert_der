@@ -1,0 +1,17 @@
+#!/bin/bash
+
+input_hex=$(./to_hex)
+is_cert_pem=$(./is_cert_pem)
+is_cert_crl=$(./is_cert_crl)
+is_valid_cert=$(echo "$input_hex" | ./from_hex | ./is_valid_cert)
+
+#echo $is_cert_pem
+#echo $is_valid_cert
+#exit
+
+if [[ "$is_cert_pem" == "0"  && "$is_cert_crl" == "0" && "$is_valid_cert" == "1" ]]; then
+    ./echo "1"
+else
+    ./echo "0"
+fi
+

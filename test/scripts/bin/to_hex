@@ -1,0 +1,11 @@
+#!/bin/bash
+
+<<comment
+    This command is ugly and hard to remember.
+    Whitespace is removed as a single byte matters when
+    signing and verifing information.
+comment
+
+out=$(od -A n -t x1 - | sed 's/ *//g' | ./trim_whitespace)
+./echo $out | ./is_valid_hex_len > /dev/null
+./echo $out

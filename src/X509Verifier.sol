@@ -318,24 +318,7 @@ contract X509Verifier is Test, DateTime {
         x = toX509Time(cert.bytesAt(ptr));
         console.log(x);
 
-        //ptr = cert.firstChildOf(ptr); 
-        //x = toX509Time(cert.bytesAt(cert.firstChildOf(ptr)));
-        //console.log(x);
 
-
-        // Arrive at the validity field
-        // todo verifiy validity timestamps
-        // uint256 validityPtr = ptr;
-        // bytes memory validNotBefore = cert.bytesAt(validityPtr);
-        // console.logBytes(validNotBefore);
-        // uint40 validNotBefore = uint40(toTimestamp(cert.bytesAt(validityPtr)));
-        // console.log("validNotBefore: %s", validNotBefore);
-        // validityPtr = cert.nextSiblingOf(validityPtr);
-        // bytes memory validNotAfter = cert.bytesAt(validityPtr);
-        // console.logBytes(validNotAfter);
-        // uint40 validNotAfter = uint40(toTimestamp(cert.bytesAt(validityPtr)));
-        // console.log("validNotAfter: %s", validNotAfter);
-        // Traverse until the subjectPublicKeyInfo field
 
 
         ptr = cert.nextSiblingOf(ptr); // point to subject

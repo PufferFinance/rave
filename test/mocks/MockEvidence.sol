@@ -7,8 +7,8 @@ abstract contract MockEvidence {
     function signingCert() public pure virtual returns (bytes memory);
     function signingMod() public pure virtual returns (bytes memory);
     function signingExp() public pure virtual returns (bytes memory);
-    function mrenclave() public pure virtual returns (bytes32);
-    function mrsigner() public pure virtual returns (bytes32);
+    function mrenclave() public pure virtual returns (bytes memory);
+    function mrsigner() public pure virtual returns (bytes memory);
     function payload() public pure virtual returns (bytes memory);
 }
 
@@ -53,12 +53,12 @@ contract ValidBLSEvidence is MockEvidence {
     }
 
     // The expected MRENCLAVE value in this specific report
-    function mrenclave() public pure override returns (bytes32) {
+    function mrenclave() public pure override returns (bytes memory) {
         return hex"d0ae774774c2064a60dd92541fcc7cb8b3acdea0d793f3b27a27a44dbf71e75f";
     }
 
     // The expected MRSIGNER value in this specific report
-    function mrsigner() public pure override returns (bytes32) {
+    function mrsigner() public pure override returns (bytes memory) {
         return hex"83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e";
     }
 

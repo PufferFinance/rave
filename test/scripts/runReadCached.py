@@ -4,6 +4,7 @@ import sys
 import json
 
 import eth_abi
+from utils import *
 
 
 def main():
@@ -19,7 +20,8 @@ def main():
 
     for p in paths:
         with open(p) as f:
-            hex_data = f.read().strip('0x')
+            hex_data = f.read()
+            hex_data = strip_0x(hex_data)
             bytes_data = bytes.fromhex(hex_data)
             cached_data.append(bytes_data)
         

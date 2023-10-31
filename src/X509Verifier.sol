@@ -7,9 +7,10 @@ import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
 import { SafeMath } from "openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
 import { Math } from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import { Utils } from "./Utils.sol";
+import "./DateTime.sol";
 import { Test, console } from "forge-std/Test.sol";
 
-contract X509Verifier is Test {
+contract X509Verifier is Test, DateTime {
     using Asn1Decode for bytes;
     using BytesUtils for bytes;
     using Utils for bytes;
@@ -17,6 +18,21 @@ contract X509Verifier is Test {
 
     bytes constant _SHA256_PAD_ID_WITH_NULL = hex"3031300d060960864801650304020105000420";
     bytes constant _SHA256_PAD_ID_WITHOUT_NULL = hex"302f300b06096086480165030402010420";
+    bytes constant _CERT_PUB_ALG = hex"2A864886F70D010101";
+    bytes constant _CERT_SIG_ALG = hex"2a864886f70d01010b";
+
+    bytes constant _INTEL_ROOT_MOD = hex"9F3C647EB5773CBB512D2732C0D7415EBB55A0FA9EDE2E649199E6821DB910D53177370977466A6A5E4786CCD2DDEBD4149D6A2F6325529DD10CC98737B0779C1A07E29C47A1AE004948476C489F45A5A15D7AC8ECC6ACC645ADB43D87679DF59C093BC5A2E9696C5478541B979E754B573914BE55D32FF4C09DDF27219934CD990527B3F92ED78FBF29246ABECB71240EF39C2D7107B447545A7FFB10EB060A68A98580219E36910952683892D6A5E2A80803193E407531404E36B315623799AA825074409754A2DFE8F5AFD5FE631E1FC2AF3808906F28A790D9DD9FE060939B125790C5805D037DF56A99531B96DE69DE33ED226CC1207D1042B5C9AB7F404FC711C0FE4769FB9578B1DC0EC469EA1A25E0FF9914886EF2699B235BB4847DD6FF40B606E6170793C2FB98B314587F9CFD257362DFEAB10B3BD2D97673A1A4BD44C453AAF47FC1F2D3D0F384F74A06F89C089F0DA6CDB7FCEEE8C9821A8E54F25C0416D18C46839A5F8012FBDD3DC74D256279ADC2C0D55AFF6F0622425D1B";
+    bytes constant _INTEL_ROOT_EXP = hex"010001";
+
+    // Intel SGX Attestation Report Signing [subject] (issuer blank)
+    bytes constant _SGX_REPORT_SIGNING_SUBJECT = hex"310b3009060355040613025553310b300906035504080c0243413114301206035504070c0b53616e746120436c617261311a3018060355040a0c11496e74656c20436f72706f726174696f6e3130302e06035504030c27496e74656c20534758204174746573746174696f6e205265706f7274205369676e696e67204341";
+
+    bytes constant _SGX_REPORT_SIGNING_ISSUER = hex"310b3009060355040613025553310b300906035504080c0243413114301206035504070c0b53616e746120436c617261311a3018060355040a0c11496e74656c20436f72706f726174696f6e312d302b06035504030c24496e74656c20534758204174746573746174696f6e205265706f7274205369676e696e67";
+
+    // Intel SGX Attestation Report Root CA Signing [subject and issuer]
+    bytes constant _SGX_ROOT_SA_SUBJECT = hex"310b3009060355040613025553310b300906035504080c0243413114301206035504070c0b53616e746120436c617261311a3018060355040a0c11496e74656c20436f72706f726174696f6e3130302e06035504030c27496e74656c20534758204174746573746174696f6e205265706f7274205369676e696e67204341";
+
+    // 06092a864886f70d01010b0500
 
     constructor() { }
 
@@ -153,6 +169,30 @@ contract X509Verifier is Test {
         return success && (keccak256(res) == keccak256(encodedMsg));
     }
 
+    function toX509Time(bytes memory x509Time) public pure returns (uint) {
+        uint16 yrs;  uint8 mnths;
+        uint8  dys;  uint8 hrs;
+        uint8  mins; uint8 secs;
+        uint8  offset;
+
+        if (x509Time.length == 13) {
+        if (uint8(x509Time[0])-48 < 5) yrs += 2000;
+        else yrs += 1900;
+        }
+        else {
+        yrs += (uint8(x509Time[0])-48) * 1000 + (uint8(x509Time[1])-48) * 100;
+        offset = 2;
+        }
+        yrs +=  (uint8(x509Time[offset+0])-48)*10 + uint8(x509Time[offset+1])-48;
+        mnths = (uint8(x509Time[offset+2])-48)*10 + uint8(x509Time[offset+3])-48;
+        dys +=  (uint8(x509Time[offset+4])-48)*10 + uint8(x509Time[offset+5])-48;
+        hrs +=  (uint8(x509Time[offset+6])-48)*10 + uint8(x509Time[offset+7])-48;
+        mins += (uint8(x509Time[offset+8])-48)*10 + uint8(x509Time[offset+9])-48;
+        secs += (uint8(x509Time[offset+10])-48)*10 + uint8(x509Time[offset+11])-48;
+
+        return toTimestamp(yrs, mnths, dys, hrs, mins, secs);
+    }
+
     /*
      * @dev specs: https://www.ietf.org/rfc/rfc5280.txt
      * @dev     Certificate  ::=  SEQUENCE  {
@@ -187,17 +227,38 @@ contract X509Verifier is Test {
         view
         returns (bytes memory, bytes memory)
     {
-        // Pointer to top level asn1 object: Sequence{tbsCertificate, signatureAlgorithm, signatureValue}
-        uint256 root = cert.root();
+        /*
+        Test code calls this function directly
+        using self-signed certs. Consequently, they
+        will have different mods and exps to Intel.
+        Extended checks for issuer and subject will
+        be disabled in this case.
+        */
+        bool extended_checks = false;
+        if(
+            (parentMod.compare(_INTEL_ROOT_MOD) == 0)
+                &&
+            (parentExp.compare(_INTEL_ROOT_EXP) == 0)
+        ) {
+            extended_checks = true;
+        }
+        console.log(extended_checks);
 
         // Traverse to first in sequence (the tbsCertificate)
-        uint256 tbsPtr = cert.firstChildOf(root);
+        uint256 tbsPtr = cert.firstChildOf(cert.root());
 
         // Extracts the TBSCerificate (what is used as input to RSA-SHA256)
-        bytes memory certBody = cert.allBytesAt(tbsPtr);
+        //bytes memory certBody = cert.allBytesAt(tbsPtr);
 
         // Top level traverse to signatureAlgorithm
         uint256 sigAlgPtr = cert.nextSiblingOf(tbsPtr);
+        require(
+            _CERT_SIG_ALG.compare(
+                cert.bytesAt(
+                    cert.firstChildOf(sigAlgPtr)
+                )
+            ) == 0
+        );
 
         // Top level traverse to signatureValue
         uint256 sigPtr = cert.nextSiblingOf(sigAlgPtr);
@@ -206,7 +267,7 @@ contract X509Verifier is Test {
         bytes memory signature = cert.bytesAt(sigPtr);
 
         // Verify the parent signed the certBody
-        require(verifyChildCert(certBody, signature, parentMod, parentExp), "verifyChildCert fail");
+        require(verifyChildCert(cert.allBytesAt(tbsPtr), signature, parentMod, parentExp), "verifyChildCert fail");
         //require(verifyRSA(certBody, signature, parentMod, parentExp), "verifyChildCert fail");
 
         //  ----------------
@@ -217,7 +278,7 @@ contract X509Verifier is Test {
         uint256 ptr = cert.firstChildOf(tbsPtr);
 
         // Account for v1 vs v3
-        if (cert[NodePtr.ixs(ptr)] == 0xa0) {
+        if (cert[NodePtr.type_index(ptr)] == 0xa0) {
             ptr = cert.nextSiblingOf(ptr);
         }
 
@@ -227,27 +288,65 @@ contract X509Verifier is Test {
         // Skip the next 3 fields (signature, issuer, validity, subject)
         ptr = cert.nextSiblingOf(ptr); // point to signature
         ptr = cert.nextSiblingOf(ptr); // point to issuer
+        console.log("issuer...");
+        if(extended_checks) {
+            require(
+                _SGX_REPORT_SIGNING_SUBJECT.compare(
+                    cert.bytesAt(ptr)
+                ) == 0
+            );
+        }
+        
+
         ptr = cert.nextSiblingOf(ptr); // point to validity
+        //ptr = cert.firstChildOf(ptr);
 
         // Arrive at the validity field
         // todo verifiy validity timestamps
-        // uint256 validityPtr = ptr;
-        // bytes memory validNotBefore = cert.bytesAt(validityPtr);
-        // console.logBytes(validNotBefore);
-        // uint40 validNotBefore = uint40(toTimestamp(cert.bytesAt(validityPtr)));
-        // console.log("validNotBefore: %s", validNotBefore);
-        // validityPtr = cert.nextSiblingOf(validityPtr);
-        // bytes memory validNotAfter = cert.bytesAt(validityPtr);
-        // console.logBytes(validNotAfter);
-        // uint40 validNotAfter = uint40(toTimestamp(cert.bytesAt(validityPtr)));
-        // console.log("validNotAfter: %s", validNotAfter);
+        console.log("Valid before unix = ");
 
-        // Traverse until the subjectPublicKeyInfo field
+        console.logBytes(cert.bytesAt(ptr));
+        console.logBytes(cert.bytesAt(cert.firstChildOf(ptr)));
+
+        // Valid before.
+        ptr = cert.firstChildOf(ptr);
+        uint x = toX509Time(cert.bytesAt(ptr));
+        console.log(x);
+
+        // Valid after.
+        ptr = cert.nextSiblingOf(ptr);
+        x = toX509Time(cert.bytesAt(ptr));
+        console.log(x);
+
+
+
+
         ptr = cert.nextSiblingOf(ptr); // point to subject
+        console.log("subject");
+        console.logBytes(cert.bytesAt(ptr));
+        if(extended_checks) {
+            require(
+                _SGX_REPORT_SIGNING_ISSUER.compare(
+                    cert.bytesAt(ptr)
+                ) == 0
+            );
+        }
+
+
         ptr = cert.nextSiblingOf(ptr); // point to subjectPublicKeyInfo
 
         // Enter subjectPublicKeyInfo
         ptr = cert.firstChildOf(ptr); // point to subjectPublicKeyInfo.algorithm
+
+        // Require the pubkey algorithm to be RSA.
+        require(
+            _CERT_PUB_ALG.compare(
+                cert.bytesAt(
+                    cert.firstChildOf(ptr)
+                )
+            ) == 0
+        );
+
         ptr = cert.nextSiblingOf(ptr); // point to subjectPublicKeyInfo.subjectPublicKey
 
         // Extract DER-encoded RSA public key

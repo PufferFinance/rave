@@ -11,4 +11,5 @@ abstract contract RAVEConsts {
 
     bytes32 constant OK_STATUS = keccak256("OK");
     bytes32 constant HARDENING_STATUS = keccak256("SW_HARDENING_NEEDED");
+    bytes constant NULL = hex"";
 }

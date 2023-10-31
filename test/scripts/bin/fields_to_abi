@@ -1,0 +1,11 @@
+#!/usr/bin/python3
+
+import sys, eth_abi, binascii
+
+vals = []
+for hex_val in sys.argv[1:]:
+    val = binascii.unhexlify(hex_val.encode("ascii"))
+    vals.append(val)
+
+payload = eth_abi.encode(['bytes'] * len(vals), vals)
+print(payload.hex(), end="")

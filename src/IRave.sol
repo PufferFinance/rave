@@ -32,8 +32,8 @@ interface IRave {
         bytes memory leafX509Cert,
         bytes memory signingMod,
         bytes memory signingExp,
-        bytes32 mrenclave,
-        bytes32 mrsigner
+        bytes memory mrenclave,
+        bytes memory mrsigner
     ) external view returns (bytes memory payload);
 
     /*
@@ -51,7 +51,7 @@ interface IRave {
         bytes memory sig,
         bytes memory signingMod,
         bytes memory signingExp,
-        bytes32 mrenclave,
-        bytes32 mrsigner
+        bytes memory mrenclave,
+        bytes memory mrsigner
     ) external view returns (bytes memory payload);
 }

@@ -1,0 +1,15 @@
+#!/usr/bin/python3
+
+import sys
+from lib import *
+
+data = sys.stdin.buffer.read()
+data = data.decode("utf-8")
+func_sig = sys.argv[1].encode("ascii")
+
+# Add function name to out.
+out = sha3_hex(func_sig)[:8]
+out = out + data
+
+# Then dump everything as hex.
+print(out, end="")

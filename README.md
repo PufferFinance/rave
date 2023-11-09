@@ -29,7 +29,7 @@ forge build
 
 Setup Python virtual environment to install script dependencies.
 ```sh
-python3 -m venv ./env
+python3 -m venv .env
 source .env/bin/activate
 pip install -r requirements.txt
 ```

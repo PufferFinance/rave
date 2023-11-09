@@ -27,12 +27,6 @@ forge install
 forge build
 ```
 
-Install RAVe dependencies:
-```sh
-forge install
-forge build
-```
-
 Setup Python virtual environment to install script dependencies.
 ```sh
 python3 -m venv ./env

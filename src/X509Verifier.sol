@@ -146,7 +146,7 @@ library X509Verifier {
      * @param certBody The DER-encoded body (preimage) of the x509 
      * @return Returns ...
      */
-    function notExpired(bytes calldata certBody) public view returns (bool) {
+    function notExpired(bytes calldata) public pure returns (bool) {
         // TODO
         return true;
     }

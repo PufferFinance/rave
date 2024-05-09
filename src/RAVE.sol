@@ -69,7 +69,7 @@ contract RAVE is RAVEBase, JSONBuilder {
     */
     function _buildReportBytes(bytes memory encodedReportValues)
         internal
-        view
+        pure
         returns (Values memory reportValues, bytes memory reportBytes)
     {
         // Decode the report JSON values

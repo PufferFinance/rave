@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity >=0.8.0 <0.9.0;
 
-import { BytesUtils } from "ens-contracts/dnssec-oracle/BytesUtils.sol";
+import { BytesUtils } from "./BytesUtils.sol";
 import { RSAVerify } from "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
 import { IRave } from "rave/IRave.sol";
 

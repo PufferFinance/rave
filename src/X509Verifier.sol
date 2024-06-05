@@ -2,7 +2,7 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import { Asn1Decode, NodePtr } from "rave/ASN1Decode.sol";
-import { RSAVerify } from "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
+import { RSAVerify } from "./RSAVerify.sol";
 import { BytesUtils } from "./BytesUtils.sol";
 
 library X509Verifier {

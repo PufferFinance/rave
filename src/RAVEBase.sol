@@ -2,7 +2,7 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import { BytesUtils } from "./BytesUtils.sol";
-import { RSAVerify } from "ens-contracts/dnssec-oracle/algorithms/RSAVerify.sol";
+import { RSAVerify } from "./RSAVerify.sol";
 import { IRave } from "rave/IRave.sol";
 
 abstract contract RAVEBase is IRave {

@@ -4,7 +4,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import { X509Verifier } from "rave/X509Verifier.sol";
 import { JSONBuilder } from "rave/JSONBuilder.sol";
 import { BytesUtils } from "./BytesUtils.sol";
-import { Base64 } from "@openzeppelin/contracts//utils/Base64.sol";
+import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
 import { RAVEBase } from "rave/RAVEBase.sol";
 
 /**
